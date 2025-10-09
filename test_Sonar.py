@@ -18,6 +18,9 @@ def test_sonar_complete():
     total_passed = 0
     total_failed = 0
     
+    # Make randomness deterministic for reproducibility
+    np.random.seed(0)
+
     # PART A: Model Tests
     print("\n" + "="*60)
     print("PART A: MODEL FUNCTIONALITY TESTS")
