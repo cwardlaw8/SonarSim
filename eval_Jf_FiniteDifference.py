@@ -1,6 +1,6 @@
 import numpy as np
 
-def eval_Jf_FiniteDifference(eval_f, x0, p, u):
+def eval_Jf_FiniteDifference(eval_f, x0, p, u, verbose=False):
     """
     evaluates the Jacobian of the vector field f() at state x0
     p is a structure containing all model parameters
@@ -25,7 +25,8 @@ def eval_Jf_FiniteDifference(eval_f, x0, p, u):
         # dxFD = 2 * np.sqrt(np.finfo(float).eps) * max(1, np.linalg.norm(x0, np.inf)) # similar correction for large ||x0||
         dxFD = 2 * np.sqrt(np.finfo(float).eps) * np.sqrt(1 + np.linalg.norm(x0, np.inf)) # used in the NITSOL solver
         # dxFD = 2 * np.sqrt(np.finfo(float).eps) * np.sqrt(max(1, np.linalg.norm(x0, np.inf))) # similar to NITSOL
-        print(f'dxFD not specified: using 2*sqrt(eps)*sqrt(1+||x||) = {dxFD}')
+        if verbose:
+            print(f'dxFD not specified: using 2*sqrt(eps)*sqrt(1+||x||) = {dxFD}')
 
     Jf = np.zeros((len(f_x0), N))
 
