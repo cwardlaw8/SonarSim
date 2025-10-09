@@ -145,7 +145,7 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
     if UseSparseMatrices:
         p['A'] = sp.bmat([[sp.csr_matrix((N, N)), sp.eye(N)],
                           [L, -p['alpha']*sp.eye(N)]]).tocsr()
-        p['B'] = sp.lil_matrix((2*N, 1), dtype=float)
+        B_lil = sp.lil_matrix((2*N, 1), dtype=float)
     else:
         p['A'] = np.block([[np.zeros((N, N)), np.eye(N)],
                           [L, -p['alpha']*np.eye(N)]])
@@ -155,11 +155,17 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
     # Scale source by cell area so the effective source is grid-invariant.
     # With this choice, Bu has units of [Pa/s^2] provided u(t) has units [Pa·m^2/s^2].
     source_idx = idx(p['sonar_ix'], p['sonar_iz'])
-    p['B'][N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
+    if UseSparseMatrices:
+        B_lil[N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
+        p['B'] = B_lil.tocsr()
+    else:
+        p['B'][N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     
     # initial conditions
     x_start = np.zeros((2*N, 1))
-    x_start[:N] = np.random.randn(N, 1) * 1e-10  # small noise in pressure
+    # small deterministic noise in pressure for reproducible visuals
+    rng = np.random.default_rng(0)
+    x_start[:N] = rng.standard_normal((N, 1)) * 1e-10
     
     t_start = 0
     t_cross = max(Lx, Lz) / p['c']
