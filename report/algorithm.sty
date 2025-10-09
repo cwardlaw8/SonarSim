@@ -1,0 +1,9 @@
+% Minimal algorithm float environment compatible with algpseudocode/algorithmicx
+% Provides a floating environment `algorithm' with caption support.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{algorithm}[2025/09/30 Minimal algorithm float]
+\RequirePackage{float}
+\floatstyle{ruled}
+\newfloat{algorithm}{tbp}{loa}
+\floatname{algorithm}{Algorithm}
+\providecommand{\listofalgorithms}{\listof{algorithm}{List of Algorithms}}
