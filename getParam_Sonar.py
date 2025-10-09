@@ -152,8 +152,10 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
         p['B'] = np.zeros((2*N, 1))
     
     # source location
+    # Scale source by cell area so the effective source is grid-invariant.
+    # With this choice, Bu has units of [Pa/s^2] provided u(t) has units [Pa·m^2/s^2].
     source_idx = idx(p['sonar_ix'], p['sonar_iz'])
-    p['B'][N + source_idx, 0] = 1
+    p['B'][N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     
     # initial conditions
     x_start = np.zeros((2*N, 1))

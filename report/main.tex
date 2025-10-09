@@ -125,6 +125,7 @@ or equivalently, in compact state-space form: $\mathbf{y}(t) = C \mathbf{x}(t)$,
     \item $p$ in Pascals [Pa], $w=\dot p$ in [Pa/s], $c$ in [m/s], $\alpha$ in [1/s].
     \item $L$ embeds the spatial scaling $c^2/\Delta x^2$ and $c^2/\Delta z^2$.
     \item The source enters $\dot w = c^2 L p - \alpha w + b\,u(t)$, with $b_{k_\mathrm{src}} = 1/(\Delta x\,\Delta z)$. With this choice, $u(t)$ must have units [Pa\,$\cdot$\,m$^2$/s$^2$] so that $b\,u(t)$ has units [Pa/s$^2$]. In practice we use a normalized $u(t)$ for demonstration; amplitudes are chosen for numerical clarity rather than physical calibration.
+    \item This area-based normalization makes the effective source strength grid-invariant: the same $u(t)$ yields comparable amplitudes across different $(N_x,N_z)$. Our implementation applies this scaling in the input vector $b$.
 \end{itemize}
 
 \newpage
