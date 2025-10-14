@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import time
 from functools import partial
 
-def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif_file_name="Leapfrog_visualization.gif"):
+def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif_file_name="Leapfrog_visualization.gif", verbose=True):
     """
     Leapfrog integration scheme for second-order wave equations.
     Much more stable than Forward Euler for oscillatory systems.
@@ -73,7 +74,7 @@ def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif
     # Main leapfrog loop
     print(f"Running {NumIter-1} leapfrog steps...")
     for n in range(1, NumIter):
-        if n % max(1, NumIter//10) == 0:
+        if n % max(1, NumIter//10) == 0 and verbose:
             print(f"  Progress: {100*n/NumIter:.1f}%")
         
         t[n+1] = t[n] + dt
@@ -182,4 +183,171 @@ def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE):
     if abs(growth_leap[-1] - 1.0) < 0.1:
         print("✓  Leapfrog is STABLE (conserved energy)")
     
+    return fig
+
+def test_dt_sweep_leapfrog(eval_f, x_start, p, eval_u,
+                           exponents,
+                           max_steps,
+                           use_outputs=False,
+                           eval_g=None,
+                           quiet=False):
+    """
+    Cold-restart Δt sweep for Leapfrog (no solver changes).
+    - For each Δt = 10**e (e in `exponents`), we define a common horizon T from the coarsest step
+      and run Leapfrog in chunks of at most `max_steps` steps, re-bootstrapping each chunk (cold restart).
+    - The last chunk length is chosen so that each run lands exactly at T (constant adjusted Δt per run).
+    - We compare the final vector (state or outputs) against the smallest feasible Δt run and plot a V-curve.
+
+    Parameters
+    ----------
+    eval_f : callable
+        f(x, p, u) -> dx/dt  (expects x as vector/column; your LeapfrogSolver calls it)
+    x_start : ndarray
+        Initial state at the start time; dtype sets precision.
+    p : dict
+        Parameter dict; if it contains 'A', we estimate a κ(A)·eps floor line.
+        If it contains 't_start', we advance it per chunk so u(t) stays aligned.
+    eval_u : callable
+        u(t) -> scalar input (absolute time). We wrap it with a time offset per chunk.
+    exponents : iterable[int]
+        Δt candidates: Δt = 10**e, ordered from coarse to fine (e.g., range(-4, -13, -1)).
+    max_steps : int
+        Hard cap per LeapfrogSolver call. Larger runs are split into several cold-restart chunks.
+    use_outputs : bool
+        If True (and eval_g provided), compare measurement y=g(x) at final time; else compare state x.
+    eval_g : callable or None
+        g(x, p) -> measurement vector (e.g., hydrophones). Used only if use_outputs=True.
+    quiet : bool
+        If False, prints progress for each Δt and per-chunk progress.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Semilogy plot of relative error vs -log10(Δt_adj).
+    """
+
+    # ---------- Define shared horizon T from the coarsest Δt ----------
+    exponents = list(exponents)
+    if len(exponents) < 2:
+        raise ValueError("Provide at least two exponents to produce a sweep.")
+    dt0 = 10.0 ** float(exponents[0])               # coarsest step
+    T   = max_steps * dt0                           # common horizon so the coarsest run fits in 1 chunk
+    if not quiet:
+        print(f"[sweep] Coarsest Δt={dt0:.1e} -> T={T:.3e} with max_steps={max_steps:,}")
+
+    # ---------- Floors/guides ----------
+    x0_arr = np.asarray(x_start).reshape(-1)
+    eps = np.finfo(x0_arr.dtype).eps if x0_arr.dtype.kind == 'f' else np.finfo(np.float64).eps
+    kappa_line = None
+    if isinstance(p, dict) and ('A' in p):
+        try:
+            kappa = float(np.linalg.cond(p['A']))
+            if np.isfinite(kappa) and kappa > 0:
+                kappa_line = kappa * eps
+        except Exception:
+            kappa_line = None
+
+    # ---------- One full run at fixed (adjusted) Δt using cold-restart chunking ----------
+    def _run_cold_restart(dt_target):
+        """
+        Run from t=0 to T using constant adjusted Δt (Δt_adj = T / steps_total),
+        split into chunks of <= max_steps. Each chunk uses LeapfrogSolver fresh (RK2 bootstrap).
+        Returns (final_vec, dt_adj, steps_total).
+        """
+        # total steps and adjusted dt so we land exactly at T
+        steps_total = int(np.ceil(T / dt_target))
+        dt_adj = T / steps_total
+
+        # running state/time and a working copy of p to move t_start forward (if it exists)
+        x_curr = x0_arr.copy()
+        t_offset = float(p.get('t_start', 0.0))  # absolute time anchor
+        remaining = steps_total
+
+        # Wrapper to shift time for u(t) per chunk
+        def make_u_with_offset(offset):
+            return (lambda t: eval_u(t + offset))
+
+        # Process chunks
+        chunk_idx = 0
+        while remaining > 0:
+            steps = min(max_steps, remaining)
+            # build a shallow copy of p with an updated t_start (helps if solver uses it)
+            p_chunk = dict(p)
+            p_chunk['t_start'] = t_offset
+
+            # shifted input for this chunk
+            eval_u_shifted = make_u_with_offset(t_offset)
+
+            # Call your LeapfrogSolver correctly: (eval_f, x_start, p, eval_u, NumIter, w)
+            out = LeapfrogSolver(eval_f, x_curr, p_chunk, eval_u_shifted, steps, dt_adj, verbose=False)
+
+            # Extract final state from the chunk
+            if isinstance(out, tuple):
+                X_chunk = out[0]
+                x_curr = (X_chunk[:, -1] if getattr(X_chunk, "ndim", 1) == 2
+                          else np.asarray(X_chunk).reshape(-1))
+            else:
+                x_curr = np.asarray(out).reshape(-1)
+
+            # advance absolute time and remaining steps
+            t_offset += steps * dt_adj
+            remaining -= steps
+            chunk_idx += 1
+
+            if not quiet:
+                print(f"   [Δt={dt_adj:.1e}] chunk {chunk_idx} done "
+                      f"(steps={steps:,}, t={t_offset:.3e}/{T:.3e})")
+
+        # Return state or outputs as comparison vector
+        if use_outputs and (eval_g is not None):
+            vec = np.asarray(eval_g(x_curr, p), dtype=float).reshape(-1)
+        else:
+            vec = x_curr.reshape(-1)
+        return vec, dt_adj, steps_total
+
+    # ---------- Build runs across Δt candidates ----------
+    records = []
+    for e in exponents:
+        dt = 10.0 ** float(e)
+        if not quiet:
+            print(f"[run] Δt_target={dt:.1e} → cold-restart chunks up to max_steps={max_steps:,}")
+        vec, dt_adj, steps_total = _run_cold_restart(dt)
+        records.append((dt, dt_adj, steps_total, vec))
+
+    # Reference = smallest Δt (last entry assuming exponents in descending order)
+    dt_ref, dt_ref_adj, steps_ref, vec_ref = records[-1]
+    ref_norm = np.linalg.norm(vec_ref) + 1e-300
+
+    # ---------- Compute errors ----------
+    digits, errors = [], []
+    for dt, dt_adj, steps_total, vec in records:
+        rel_err = np.linalg.norm(vec - vec_ref) / ref_norm
+        digits.append(-np.log10(dt_adj))
+        errors.append(rel_err)
+    digits = np.asarray(digits)
+    errors = np.asarray(errors)
+
+    # ---------- Plot ----------
+    fig, ax = plt.subplots(figsize=(6.0, 4.2))
+    ax.semilogy(digits, errors, marker='o', linewidth=1.5)
+    ax.set_xlabel(r"digits in $\Delta t$  ( $-\log_{10} \Delta t_{\mathrm{adj}}$ )")
+    ax.set_ylabel("relative error vs smallest Δt")
+    ax.set_title("Leapfrog Δt sweep (cold-restart chunking)")
+    ax.grid(True, which='both', alpha=0.3)
+
+    # Floors
+    ax.axhline(eps, linestyle='--', linewidth=1.0, label=f"machine eps ≈ {eps:.1e}")
+    if kappa_line is not None:
+        ax.axhline(kappa_line, linestyle=':', linewidth=1.0, label=f"κ(A)·eps ≈ {kappa_line:.1e}")
+    ax.legend()
+
+    # Console summary
+    if not quiet:
+        print(f"[summary] dtype={x0_arr.dtype}, eps={eps:.1e}")
+        if kappa_line is not None:
+            print(f"[summary] κ(A)·eps ≈ {kappa_line:.2e}")
+        print("[summary] Runs included:")
+        for idx, (dt, dt_adj, steps_total, _) in enumerate(records):
+            print(f"[{idx}] Δt_target={dt:.1e}  Δt_adj={dt_adj:.2e}  total_steps={steps_total:,}, rel_err={errors[idx]:.2e}")
+
     return fig
