@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
+def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0):
     """
     Defines the parameters for 2D acoustic wave equation for sonar propagation.
     Returns matrices for the linear system representation dx/dt = p.A x + p.B u
@@ -34,15 +34,16 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
     """
     
     p = {
-        'c': 1500.0,        # (m/s) speed of sound
-        'rho': 1025,        # kg/m^3 density
-        'alpha': 0.0001,    # (1/s) very weak global absorption
-        'Nx': Nx,           # grid points in x
-        'Nz': Nz,           # grid points in z
-        'Lx': Lx,           # domain size x (m)
-        'Lz': Lz,           # domain size z (m)
-        'sonar_ix': Nx//4,  # source position x
-        'sonar_iz': Nz//2   # source position z
+        'c': 1500.0,           # (m/s) speed of sound
+        'rho': 1025,           # kg/m^3 density
+        'alpha': 0.0001,       # (1/s) very weak global absorption
+        'Nx': Nx,              # grid points in x
+        'Nz': Nz,              # grid points in z
+        'Lx': Lx,              # domain size x (m)
+        'Lz': Lz,              # domain size z (m)
+        'sonar_ix': Nx//4,     # source position x
+        'sonar_iz': Nz//2,     # source position z
+        'absorb_strength': absorb_strength # strength of absorbing boundary
     }
     
     n_phones = 5
@@ -69,9 +70,8 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True):
     
     c2_dx2 = (p['c']**2) / (p['dx']**2)
     c2_dz2 = (p['c']**2) / (p['dz']**2)
-    
-    absorb_damping = 0.5 * max(c2_dx2, c2_dz2)
-    # absorb_damping = 0
+     
+    absorb_damping = p['absorb_strength'] * max(c2_dx2, c2_dz2) 
     
     for i in range(Nx):
         for j in range(Nz):
