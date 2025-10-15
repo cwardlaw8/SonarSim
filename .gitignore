@@ -2,6 +2,8 @@
 __pycache__/
 
 temp/
+tools/
+*cheatsheet*
 report/main.synctex.gz
 report/main.aux
 report/main.fdb_latexmk
