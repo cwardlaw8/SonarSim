@@ -8,8 +8,9 @@
 %\usepackage{algorithmic}
 \usepackage{algpseudocode}
 \geometry{margin=0.7in}
+% Slightly tighter paragraph spacing to fit 2 pages
+\setlength{\parskip}{2pt}
 \setlength\parindent{0pt}
-\setlength{\parskip}{3pt}
 
 \begin{document}
 \textbf{2D Sonar Simulator: } Camille Wardlaw, Manuel Valencia, Demircan Tas 
@@ -25,7 +26,7 @@ PM1: required for all. PM2 or PM3: linear sparse system solvers. PM5: required s
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\linewidth]{system.jpeg}
+    \includegraphics[width=0.45\linewidth]{system.jpeg}
     \caption{2D Cartesian grid in $(x,z)$ space.}
 \end{figure}
 
@@ -59,6 +60,18 @@ where $p(x,z,t)$ is acoustic pressure [Pa], $c$ is sound speed [m/s], $\alpha$ i
 This yields a linear time-invariant ODE system $
 \dot{\mathbf{x}} = A\mathbf{x} + B u$ with state vector $\mathbf{x} = [p; w] \in \mathbb{R}^{2N}$. Here $s(x,z,t) = b(x,z)\,u(t)$ is factored into a spatial vector $b$ and temporal input $u(t)$.
 
+\textbf{Model Function:} Let $\mathcal{P}$ denote the parameter set and $\mathbf{x} = \begin{bmatrix}p\\ w\end{bmatrix}$. Define
+\[
+f:\; \mathbb{R}^{2N} \times \mathcal{P} \times \mathbb{R} \to \mathbb{R}^{2N},\quad
+f\!\left(\begin{bmatrix}p\\ w\end{bmatrix},\mathbf{p},u(t)\right)
+=
+\begin{bmatrix}
+w\\[2pt]
+c^{2} L p - \alpha w + b\,u(t)
+\end{bmatrix}.
+\]
+Then $\dot{\mathbf{x}}(t) = f(\mathbf{x}(t),\mathbf{p},u(t))$ and the output map is $\mathbf{y}(t)=g(\mathbf{x}(t),\mathbf{p})=C\,\mathbf{x}(t)$.
+
 \textbf{Spatial Discretization} The Laplacian $\nabla^2 p$ is approximated by a 5-point finite-difference stencil:
 \[
 (\nabla^2 p)_{i,j} \approx
@@ -66,12 +79,7 @@ This yields a linear time-invariant ODE system $
 \frac{p_{i,j+1}-2p_{i,j}+p_{i,j-1}}{\Delta z^2}
 \]
 
-Boundary rows in the discrete Laplacian $L$ are modified for:
-\begin{itemize}
-    \item Top boundary: pressure-release ($p=0$)
-    \item Bottom: rigid wall ($\partial p/\partial z=0$)
-    \item Left/right: simple absorbing (one-sided stencil approximation)
-\end{itemize}
+Boundary rows in the discrete Laplacian $L$ are modified for: top (pressure-release, $p=0$), bottom (rigid, $\partial p/\partial z=0$), and left/right (simple absorbing one-sided stencil).
 
 \textbf{State-Space Matrices} With $N=N_x N_z$ grid nodes:
 \[
@@ -96,9 +104,7 @@ b_{k_\mathrm{src}} = \frac{1}{\Delta x \Delta z}
 $\mathbf{p} = \{c, \alpha, N_x, N_z, L_x, L_z, i_\mathrm{src}, j_\mathrm{src}, \text{hydrophones}\}\
 $
 
-\textbf{Hydrophone array (implementation):}
-\[\text{hydrophones} = \{ z\_\mathrm{pos},\; x\_\mathrm{indices},\; n\_\mathrm{phones} \} \]
-We denote the source index as $(i_\mathrm{src}, j_\mathrm{src})$ in the derivation; in code these correspond to `p['sonar_ix']`, `p['sonar_iz']`.
+\textbf{Hydrophones (implementation):} $\{ z\_\mathrm{pos},\; x\_\mathrm{indices},\; n\_\mathrm{phones} \}$. In code: `p['sonar_ix']`, `p['sonar_iz']` for $(i_\mathrm{src}, j_\mathrm{src})$.
 
 \textbf{Input:} Gaussian-windowed pulse, source excitation.
 \[
