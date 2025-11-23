@@ -50,29 +50,40 @@ def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif
     X = np.zeros((n_states, NumIter + 1))
     t = np.zeros(NumIter + 1)
     
-    # Initial condition
+    # Initial condition at t_start (handle if provided in p dict)
+    t_start = p.get('t_start', 0.0) if isinstance(p, dict) else 0.0
     X[:, 0] = np.reshape(x_start, [-1])
-    t[0] = 0
+    t[0] = t_start
     
-    # First step: Use Forward Euler to bootstrap (or RK2 for better accuracy)
-    print("Bootstrapping with first step...")
+    # Bootstrap first step using RK4 for O(dt^4) accuracy
+    # This ensures X[:, 1] is as accurate as the main loop
+    if verbose:
+        print("Bootstrapping with RK4 for first step...")
+    
     u0 = eval_u(t[0])
-    f0 = eval_f(np.reshape(X[:, 0], [-1, 1]), p, u0)
+    x0 = X[:, 0].reshape(-1, 1)
     
-    # Option 1: Simple Forward Euler for first step
-    # X[:, 1] = X[:, 0] + dt * f0.reshape(X[:, 0].shape)
+    # RK4 coefficients
+    k1 = eval_f(x0, p, u0).reshape(-1)
     
-    # Option 2: RK2 for better accuracy in bootstrap
-    k1 = f0.reshape(X[:, 0].shape)
-    X_mid = X[:, 0] + 0.5 * dt * k1
-    u_mid = eval_u(t[0] + 0.5*dt)
-    f_mid = eval_f(np.reshape(X_mid, [-1, 1]), p, u_mid)
-    k2 = f_mid.reshape(X[:, 0].shape)
-    X[:, 1] = X[:, 0] + dt * k2
-    t[1] = dt
+    u_half = eval_u(t[0] + 0.5*dt)
+    x_k2 = (x0 + 0.5*dt*k1.reshape(-1, 1))
+    k2 = eval_f(x_k2, p, u_half).reshape(-1)
+    
+    x_k3 = (x0 + 0.5*dt*k2.reshape(-1, 1))
+    k3 = eval_f(x_k3, p, u_half).reshape(-1)
+    
+    u1 = eval_u(t[0] + dt)
+    x_k4 = (x0 + dt*k3.reshape(-1, 1))
+    k4 = eval_f(x_k4, p, u1).reshape(-1)
+    
+    # RK4 update
+    X[:, 1] = X[:, 0] + (dt/6.0) * (k1 + 2*k2 + 2*k3 + k4)
+    t[1] = t_start + dt
     
     # Main leapfrog loop
-    print(f"Running {NumIter-1} leapfrog steps...")
+    if verbose:
+        print(f"Running {NumIter-1} leapfrog steps...")
     for n in range(1, NumIter):
         if n % max(1, NumIter//10) == 0 and verbose:
             print(f"  Progress: {100*n/NumIter:.1f}%")
@@ -81,15 +92,12 @@ def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif
         u_n = eval_u(t[n])
         f_n = eval_f(np.reshape(X[:, n], [-1, 1]), p, u_n)
         
-        # Leapfrog update: x_{n+1} = x_{n-1} + 2*dt*f(x_n)
+        # Pure Leapfrog update: x_{n+1} = x_{n-1} + 2*dt*f(x_n)
+        # This is symplectic (energy-conserving) - do NOT add artificial damping
         X[:, n+1] = X[:, n-1] + 2 * dt * f_n.reshape(X[:, n].shape)
-        
-        # Optional: Add artificial damping for long-time stability
-        # This slightly breaks symplecticity but prevents drift
-        damping_factor = 0.0001  # Very small
-        X[:, n+1] = X[:, n+1] - damping_factor * (X[:, n+1] - X[:, n])
     
-    print("Leapfrog integration complete!")
+    if verbose:
+        print("Leapfrog integration complete!")
     
     # Optional visualization
     if visualize:

@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0):
+def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, alpha=0.0001):
     """
     Defines the parameters for 2D acoustic wave equation for sonar propagation.
     Returns matrices for the linear system representation dx/dt = p.A x + p.B u
@@ -36,7 +36,7 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0):
     p = {
         'c': 1500.0,           # (m/s) speed of sound
         'rho': 1025,           # kg/m^3 density
-        'alpha': 0.0001,       # (1/s) very weak global absorption
+        'alpha': alpha,        # (1/s) very weak global absorption
         'Nx': Nx,              # grid points in x
         'Nz': Nz,              # grid points in z
         'Lx': Lx,              # domain size x (m)
