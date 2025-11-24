@@ -1,11 +1,11 @@
 # 20251123 - Tasks for task H
 
-- [ ] Run a small-grid damping sweep (vary `alpha`) and check eigenvalues / stability regions using the PM5 Task C setup.
-- [ ] Choose a “golden” configuration (grid + `alpha`) shared between Task C and Task H for all MOR comparisons.
-- [ ] Add stability metrics to PM5_TaskH (eigenvalues of `A_hat`, max Re(λ), and basic energy/norm plots for full vs reduced).
+- [-] Run a small-grid damping sweep (vary `alpha`) and check eigenvalues / stability regions using the PM5 Task C setup.
+- [-] Choose a “golden” configuration (grid + `alpha`) shared between Task C and Task H for all MOR comparisons.
+- [-] Add stability metrics to PM5_TaskH (eigenvalues of `A_hat`, max Re(λ), and basic energy/norm plots for full vs reduced).
 - [ ] Implement and test an eigenmode-truncation reduced model (mode selection guided by frequency band and B/C weights).
-- [ ] Try a small multi-frequency snapshot design on the small grid (to echo Manny’s band snapshot idea without 22 GB matrices).
-- [ ] Add a discussion section in PM5_TaskH explaining why plain POD+Galerkin is not enough and motivating structure-preserving MOR.
+- [-] Try a small multi-frequency snapshot design on the small grid (to echo Manny’s band snapshot idea without 22 GB matrices).
+- [-] Add a discussion section in PM5_TaskH explaining why plain POD+Galerkin is not enough and motivating structure-preserving MOR.
 
 # 20251124 - Stability sweep outcome
 - Small-grid sweep (Nx=60, Nz=30, Lx=7.375, Lz=3.625) across α ∈ {1e-4, 1e-2, 0.5, 1.0} shows max Re(λ) < 0 for all cases; dt_max_FE ≈ 2.95e-5 (set by CFL).
@@ -20,8 +20,9 @@
 - Multi-frequency POD (band snapshots): q=60 hydro_err≈1.7e-1; unstable spectrum (max Re(λ̂) ~1.25e2).
 - Eigenmode truncation (shift-invert near 3 kHz): overflow/inf errors; unusable as-is.
 - Krylov (s=0): hydro_err ≈30+ with positive max Re(λ̂); needs shift and stabilization.
-- Stability table: all reduced bases currently have max Re(λ̂) > 0 even when errors are small; next step is a structure-/stability-preserving projection (energy inner product or damping tweak) plus retuned scaling/weights.
-- W-inner-product POD (pressure=1, velocity=5): q=60 hydro_err≈1.8e-4 with reduced max Re(λ̂) ~2.6e1 (still >0); lower q inaccurate. Needs stronger stabilization to make max Re(λ̂)<0 while keeping error near 1e-4.
+- Stability table: all reduced bases currently have max Re(λ̂) > 0 even when errors are small; next step is a structure-/stability-preserving projection (energy inner product or damping tweak) plus retuned scaling/weights. Full system is stable (max Re(λ) ≈ -0.5).
+- W-inner-product POD sweep (pressure=1,2; velocity=5,10,15,20): best is wp=2, wv=10, q=60 with hydro_err≈1.8e-4 and max Re(λ̂) ~1.3e1 (still >0). wv>10 destabilizes; lower q inaccurate. No reduced basis with max Re(λ̂)<0 yet.
+- Full system stability check (α=1.0, 60×30, Lx=Lz=100): dense eig shows max Re(λ) ≈ -0.5, min Re(λ) ≈ -0.5 → full system is stable; increasing α would only add damping and won’t fix reduced-model instability by itself.
 
 
 # 20251123 - Manny's feedback
