@@ -39,6 +39,11 @@
     - On a small grid, computing eigenvalues explicitly and checking that there are no eigenvalues with positive real part for the chosen timestep `dt`.
     - Using the eigenvalue code Manny pushed for Task C as a reference.
 
+- **Integrator / time-step observations (Task C)**
+  - The `max_dt_FE` returned from `getParam_Sonar` is effectively too optimistic for Leapfrog: in practice, stability requires `dt ≈ 0.5 * max_dt_FE`.
+  - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (`solve_ivp` implicit methods) remains stable at larger `dt` and is attractive when we can tolerate some error on the second hydrophone.
+  - For large grids, MOR would be most beneficial because running with truly stable `dt` values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
+
 - **Where things are / recommendations**
   - Manny will focus on explicit vs. implicit integrator comparisons and likely not push POD much further in time for PM5.
   - He thinks our results are still presentable if we clearly state:
