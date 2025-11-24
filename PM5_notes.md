@@ -1,3 +1,13 @@
+# 20251123 - Tasks for task H
+
+- [ ] Run a small-grid damping sweep (vary `alpha`) and check eigenvalues / stability regions using the PM5 Task C setup.
+- [ ] Choose a “golden” configuration (grid + `alpha`) shared between Task C and Task H for all MOR comparisons.
+- [ ] Add stability metrics to PM5_TaskH (eigenvalues of `A_hat`, max Re(λ), and basic energy/norm plots for full vs reduced).
+- [ ] Implement and test an eigenmode-truncation reduced model (mode selection guided by frequency band and B/C weights).
+- [ ] Try a small multi-frequency snapshot design on the small grid (to echo Manny’s band snapshot idea without 22 GB matrices).
+- [ ] Add a discussion section in PM5_TaskH explaining why plain POD+Galerkin is not enough and motivating structure-preserving MOR.
+
+
 # 20251123 - Manny's feedback
 
 - **Initial assessment of our MOR attempt**
