@@ -32,7 +32,7 @@
 - Golden configuration:
   - Grid: Nx=60, Nz=30, Lx=Lz=100.
   - Global damping: $\alpha$ = 1.0 applied on the velocity block; boundary absorption ≈5.
-  - Full system stability: dense eig of `A` gives max $\operatorname{Re}(\lambda)$ ≈ −0.5, min $\operatorname{Re}(\lambda)$ ≈ −0.5 → full model is stable.
+  - Full system stability: dense eig of `A gives max $\operatorname{Re}(\lambda)$ ≈ −0.5, min $\operatorname{Re}(\lambda)$ ≈ −0.5 → full model is stable.
 - Reference trajectory:
   - Input: band-limited ping around 3 kHz (scaled by 1e6).
   - Integrator: RK45 with tight tolerances; confidence error between nominal and tighter runs ≈1.7e−4.
@@ -42,7 +42,7 @@
 
 - Baseline POD (energy-only, single-ping snapshots):
   - $q=60$ achieves hydrophone error near the confidence level (hydro_err ≈1.75e−4).
-  - However, the reduced operator `$\hat{A}$ = Vᵀ A V` has max $\operatorname{Re}(\hat{\lambda})$ ≈ +8.9e1 → the reduced system is **unstable**, even though the full system is stable.
+  - However, the reduced operator $\hat{A}$ = Vᵀ A V has max $\operatorname{Re}(\hat{\lambda})$ ≈ +8.9e1 → the reduced system is **unstable**, even though the full system is stable.
 - Output-aware / augmented POD:
   - Scaling B and C into the snapshot set improves low-q behavior somewhat but:
     - Best case at $q=60$ still has hydro_err ≈2.4e−3 > target.
@@ -79,9 +79,9 @@
 ## Why POD+Galerkin fails to preserve stability here
 
 - The full system is stable because there exists an energy matrix P such that:
-  - `Aᵀ P + P A ≺ 0`, i.e., the energy decays over time.
+  - Aᵀ P + P A ≺ 0`, i.e., the energy decays over time.
 - Plain POD constructs V that is orthonormal in the **Euclidean** norm (or a crude diagonal surrogate for P) and then uses a Galerkin projection:
-  - `$\hat{A}$ = Vᵀ A V`.
+  - $\hat{A}$ = Vᵀ A V.
 - For damped wave / Hamiltonian-like systems, this projection is **not** structure-preserving:
   - It does not maintain the Lyapunov inequality or passivity structure.
   - As a result, even though A is Hurwitz, $\hat{A}$ can (and does) have eigenvalues with $\operatorname{Re}(\hat{\lambda})$ > 0.
@@ -100,7 +100,7 @@
   - Any reasonable integrator (Forward Euler, Leapfrog, Trapezoidal, Radau, RK45) will reflect that instability; A-stable methods won’t “fix” the model, they just integrate the unstable dynamics more robustly.
 - Therefore:
   - For the **full** model, choosing an implicit integrator (e.g., Trapezoidal/Radau) or Leapfrog with a safe dt is very important.
-  - For the **reduced** models, changing the integrator cannot solve the fundamental problem that `$\hat{A}$` is not Hurwitz.
+  - For the **reduced** models, changing the integrator cannot solve the fundamental problem that $\hat{A}$ is not Hurwitz.
 
 ## Overall conclusion for Task H
 
@@ -138,17 +138,17 @@
 - **Stability / damping observations and suggested fix**
   - While doing ODE stability checks, we noticed:
     - Global absorption $\alpha$ is currently `0.0001` (very small).
-    - Boundary absorption is `5` (large).
+    - Boundary absorption is `5 (large).
     - This combination leads to real eigenvalues (not purely imaginary), which hurts the wave-equation-like stability structure.
   - For MOR, we suggest:
-    - Increasing $\alpha$ via `getParam_Sonar` (now accepts an alpha argument) so the system is more strongly damped and has no positive real eigenvalues.
-    - On a small grid, computing eigenvalues explicitly and checking that there are no eigenvalues with positive real part for the chosen timestep `dt`.
+    - Increasing $\alpha$ via getParam_Sonar` (now accepts an alpha argument) so the system is more strongly damped and has no positive real eigenvalues.
+    - On a small grid, computing eigenvalues explicitly and checking that there are no eigenvalues with positive real part for the chosen timestep `dt.
     - Using the eigenvalue code Manny pushed for Task C as a reference.
 
 - **Integrator / time-step observations (Task C)**
-  - The $dt_{\max,\mathrm{FE}}$ returned from `getParam_Sonar` is effectively too optimistic for Leapfrog: in practice, stability requires $dt \approx 0.5\, dt_{\max,\mathrm{FE}}$.
-  - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (`solve_ivp` implicit methods) remains stable at larger `dt` and is attractive when we can tolerate some error on the second hydrophone.
-  - For large grids, MOR would be most beneficial because running with truly stable `dt` values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
+  - The $dt_{\max,\mathrm{FE}}$ returned from getParam_Sonar is effectively too optimistic for Leapfrog: in practice, stability requires $dt \approx 0.5\, dt_{\max,\mathrm{FE}}$.
+  - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (solve_ivp implicit methods) remains stable at larger `dt` and is attractive when we can tolerate some error on the second hydrophone.
+  - For large grids, MOR would be most beneficial because running with truly stable `dt values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
 
 - **Stability sweep findings (small grid)**
   - Scanning $\alpha$ ∈ {1e-4, 1e-2, 0.5, 1.0} on the small grid: max $\operatorname{Re}(\lambda)$ < 0 in all cases (~ -$\alpha$/2). Damping shifts the spectrum left but does not change $dt_{\max,\mathrm{FE}}$ (≈2.95e-5), which is set by the Laplacian CFL.
@@ -162,4 +162,4 @@
     - A stability/structure-preserving MOR (e.g., mode truncation or other methods) would be more appropriate.
   - He recommends:
     - Trying larger $\alpha$ values in our notebooks and re-running the MOR comparisons.
-    - Verifying eigenvalues (for a small grid) to ensure no positive real parts for the chosen `dt`.
+    - Verifying eigenvalues (for a small grid) to ensure no positive real parts for the chosen dt`.
