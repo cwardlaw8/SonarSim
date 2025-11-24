@@ -16,11 +16,12 @@
 - Reference: 60×30 grid, dt_max_FE≈3.99e-4, confidence error ~1.7e-4.
 - Baseline POD: q=60 hits hydro_err≈1.75e-4/state_err≈1.7e-4 but reduced spectrum has positive max Re(λ̂) (~8.9e1) → needs stabilization.
 - Output-scaled POD: best at q=60 hydro_err≈2.4e-3; still above target and unstable spectrum.
-- Weighted augmented POD: blew up (hydro_err 1e7→1e52); discard current weights/augmentation.
+- Weighted augmented POD: with milder weights now hydro_err≈2.8e-3 (q=60) but spectrum still unstable (max Re(λ̂) ~4.0e2); needs further tuning.
 - Multi-frequency POD (band snapshots): q=60 hydro_err≈1.7e-1; unstable spectrum (max Re(λ̂) ~1.25e2).
 - Eigenmode truncation (shift-invert near 3 kHz): overflow/inf errors; unusable as-is.
 - Krylov (s=0): hydro_err ≈30+ with positive max Re(λ̂); needs shift and stabilization.
 - Stability table: all reduced bases currently have max Re(λ̂) > 0 even when errors are small; next step is a structure-/stability-preserving projection (energy inner product or damping tweak) plus retuned scaling/weights.
+- W-inner-product POD (pressure=1, velocity=5): q=60 hydro_err≈1.8e-4 with reduced max Re(λ̂) ~2.6e1 (still >0); lower q inaccurate. Needs stronger stabilization to make max Re(λ̂)<0 while keeping error near 1e-4.
 
 
 # 20251123 - Manny's feedback
