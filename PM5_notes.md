@@ -7,6 +7,21 @@
 - [ ] Try a small multi-frequency snapshot design on the small grid (to echo Manny’s band snapshot idea without 22 GB matrices).
 - [ ] Add a discussion section in PM5_TaskH explaining why plain POD+Galerkin is not enough and motivating structure-preserving MOR.
 
+# 20251124 - Stability sweep outcome
+- Small-grid sweep (Nx=60, Nz=30, Lx=7.375, Lz=3.625) across α ∈ {1e-4, 1e-2, 0.5, 1.0} shows max Re(λ) < 0 for all cases; dt_max_FE ≈ 2.95e-5 (set by CFL).
+- α = 1.0 is acceptable and will be our “golden” damping for Task C/H comparisons; keep the same grid/α in the notebook for all MOR baselines.
+- Use this α=1.0 damping override on the pressure-velocity block of A; pair with Leapfrog dt ≈ 0.5·dt_max_FE or implicit (Radau/Trapezoidal) for larger grids.
+
+# 20251125 - Notebook run (golden grid α=1.0)
+- Reference: 60×30 grid, dt_max_FE≈3.99e-4, confidence error ~1.7e-4.
+- Baseline POD: q=60 hits hydro_err≈1.75e-4/state_err≈1.7e-4 but reduced spectrum has positive max Re(λ̂) (~8.9e1) → needs stabilization.
+- Output-scaled POD: best at q=60 hydro_err≈2.4e-3; still above target and unstable spectrum.
+- Weighted augmented POD: blew up (hydro_err 1e7→1e52); discard current weights/augmentation.
+- Multi-frequency POD (band snapshots): q=60 hydro_err≈1.7e-1; unstable spectrum (max Re(λ̂) ~1.25e2).
+- Eigenmode truncation (shift-invert near 3 kHz): overflow/inf errors; unusable as-is.
+- Krylov (s=0): hydro_err ≈30+ with positive max Re(λ̂); needs shift and stabilization.
+- Stability table: all reduced bases currently have max Re(λ̂) > 0 even when errors are small; next step is a structure-/stability-preserving projection (energy inner product or damping tweak) plus retuned scaling/weights.
+
 
 # 20251123 - Manny's feedback
 
