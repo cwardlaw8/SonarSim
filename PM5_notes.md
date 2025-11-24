@@ -111,6 +111,12 @@
   - They motivate future work on structure-preserving MOR tailored to sonar and wave propagation problems.
 
 
+# 20251125 – Visualization (Task F)
+- Notebook: `PM5_TaskF.ipynb`.
+- Uses the golden configuration ($\alpha=1.0$, 60×30, 100 m × 100 m) with a 20 Hz sinusoidal drive (scaled by $10^6$).
+- Leverages `visualize_sonar_setup` to plot the domain, source, hydrophones, boundaries, and a 20 Hz wavelength scale.
+- Runs an RK45 simulation and feeds the pressure field into `create_wave_animation` to produce `PM5_20Hz_wave.gif`.
+
 # 20251123 - Manny's feedback
 
 - **Initial assessment of our MOR attempt**

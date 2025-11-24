@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-def create_wave_animation(X, t, p, save_filename='wave_animation.gif'):
+def create_wave_animation(X, t, p, save_filename='wave_animation.gif', frame_skip=5, max_frames=3000, fps=20):
     """
     Create an animation of wave propagation in the 2D container
     
@@ -11,6 +11,9 @@ def create_wave_animation(X, t, p, save_filename='wave_animation.gif'):
     t: time vector
     p: parameter dictionary containing grid info
     save_filename: name for the saved animation
+    frame_skip: use every nth frame from the simulation (default 5)
+    max_frames: cap on animation frames (0 to use all); default 3000
+    fps: frames per second for the saved gif
     """
     Nx, Nz = p['Nx'], p['Nz']
     dx, dz = p['dx'], p['dz']
@@ -52,13 +55,11 @@ def create_wave_animation(X, t, p, save_filename='wave_animation.gif'):
     # Mark hydrophone locations (only if they exist and have proper indices)
     if 'hydrophones' in p:
         hydro_x = np.array(p['hydrophones']['x_indices']) * dx
-        # Check if z_pos exist, otherwise assume they're on the surface (z=0 or bottom)
         if 'z_pos' in p['hydrophones']:
             hydro_z = np.array(p['hydrophones']['z_pos']) * dz
             if np.ndim(hydro_z) == 0 and hydro_z.size == 1:
                 hydro_z = np.full_like(hydro_x, hydro_z)
         else:
-            # Assume hydrophones are at the bottom of the domain
             hydro_z = np.zeros_like(hydro_x)
         ax.plot(hydro_x, hydro_z, 'ko', markersize=6, label='Hydrophones')
     else:
@@ -71,20 +72,23 @@ def create_wave_animation(X, t, p, save_filename='wave_animation.gif'):
     
     # Animation function
     def animate(frame):
-        # Skip frames to make animation smoother (every 5th frame)
-        actual_frame = min(frame * 5, pressure_history.shape[2] - 1)
+        actual_frame = min(frame * frame_skip, pressure_history.shape[2] - 1)
         im.set_array(pressure_history[:, :, actual_frame].T)
         ax.set_title(f'Wave Propagation at t = {t[actual_frame]*1000:.1f} ms')
         return [im]
     
     # Create animation
-    num_frames = min(3000, pressure_history.shape[2] // 5)  # Limit to 3000 frames max
+    total_frames = pressure_history.shape[2] // max(frame_skip, 1)
+    if max_frames and max_frames > 0:
+        num_frames = min(max_frames, total_frames)
+    else:
+        num_frames = total_frames
     anim = animation.FuncAnimation(fig, animate, frames=num_frames, 
                                    interval=50, blit=True, repeat=True)
     
     # Save as GIF
-    print(f"Creating animation with {num_frames} frames...")
-    anim.save(save_filename, writer='pillow', fps=20, dpi=80)
+    print(f"Creating animation with {num_frames} frames (skip={frame_skip})...")
+    anim.save(save_filename, writer='pillow', fps=fps, dpi=80)
     print(f"Animation saved as {save_filename}")
     
     plt.tight_layout()
