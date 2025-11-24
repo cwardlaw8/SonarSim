@@ -13,16 +13,13 @@
 - Use this $\alpha$=1.0 damping override on the pressure-velocity block of A; pair with Leapfrog $dt \approx 0.5\, dt_{\max,\mathrm{FE}}$ or implicit (Radau/Trapezoidal) for larger grids.
 
 # 20251125 - Notebook run (golden grid $\alpha$=1.0)
-- Reference: 60×30 grid, $dt_{\max,\mathrm{FE}}$≈3.99e-4, confidence error ~1.7e-4.
-- Baseline POD: $q=60$ hits hydro_err≈1.75e-4/state_err≈1.7e-4 but reduced spectrum has positive max $\operatorname{Re}(\hat{\lambda})$ (~8.9e1) → needs stabilization.
-- Output-scaled POD: best at $q=60$ hydro_err≈2.4e-3; still above target and unstable spectrum.
-- Weighted augmented POD: with milder weights now hydro_err≈2.8e-3 ($q=60$) but spectrum still unstable (max $\operatorname{Re}(\hat{\lambda})$ ~4.0e2); needs further tuning.
-- Multi-frequency POD (band snapshots): $q=60$ hydro_err≈1.7e-1; unstable spectrum (max $\operatorname{Re}(\hat{\lambda})$ ~1.25e2).
-- Eigenmode truncation (shift-invert near 3 kHz): overflow/inf errors; unusable as-is.
-- Krylov ($s=0$): hydro_err ≈30+ with positive max $\operatorname{Re}(\hat{\lambda})$; needs shift and stabilization.
-- Stability table: all reduced bases currently have max $\operatorname{Re}(\hat{\lambda})$ > 0 even when errors are small; next step is a structure-/stability-preserving projection (energy inner product or damping tweak) plus retuned scaling/weights. Full system is stable (max $\operatorname{Re}(\lambda)$ ≈ -0.5).
-- W-inner-product POD sweep (pressure=1,2; velocity=5,10,15,20): best is wp=2, wv=10, $q=60$ with hydro_err≈1.8e-4 and max $\operatorname{Re}(\hat{\lambda})$ ~1.3e1 (still >0). wv>10 destabilizes; lower q inaccurate. No reduced basis with max $\operatorname{Re}(\hat{\lambda})$<0 yet.
-- Full system stability check ($\alpha$=1.0, 60×30, Lx=Lz=100): dense eig shows max $\operatorname{Re}(\lambda)$ ≈ -0.5, min $\operatorname{Re}(\lambda)$ ≈ -0.5 → full system is stable; increasing $\alpha$ would only add damping and won’t fix reduced-model instability by itself.
+- Reference: 60×30 grid, $dt_{\max,\mathrm{FE}}$≈3.99e-4. At 20 Hz drive, confidence error ≈1.1e-8; $q@99.9\%$ energy = 22.
+- Baseline POD: $q=40$ hydro_err≈1.32e-3, max $\operatorname{Re}(\hat{\lambda})$ ≈ +2.20; $q=60$ blows up.
+- Output/weighted POD: best at $q=40$ hydro_err≈2.5e-3, max $\operatorname{Re}(\hat{\lambda})$ ≈ +2–4; $q=60$ blows up.
+- W-inner-product POD (wp ∈ {1,2}, wv ∈ {5,6,7,10}): best is wp=2, wv=5 at $q=40$ with hydro_err≈1.32e-3 and max $\operatorname{Re}(\hat{\lambda})$ ≈ +0.44 (still >0). Higher wv or $q=60$ destabilize.
+- Multi-frequency POD (10/20/40 Hz): $q=60$ hydro_err≈8.4e-7 but max $\operatorname{Re}(\hat{\lambda})$ ≈ +99 (unstable); $q=20$–40 give ~1e-3 error with smaller but still positive max $\operatorname{Re}(\hat{\lambda})$.
+- Eigenmode truncation (shift-invert near 20 Hz): overflow/inf errors; unusable as-is. Krylov ($s=0$): hydro_err ≈0.78 with max $\operatorname{Re}(\hat{\lambda})$ ≈ +34 → inaccurate/unstable.
+- Stability takeaway: even at 20 Hz, no reduced basis achieved max $\operatorname{Re}(\hat{\lambda})$ < 0; the best (W-POD $q=40$) is close (+0.44) but still unstable. Full system remains stable (max $\operatorname{Re}(\lambda)$ ≈ -0.5).
 
 # 20251125 – High-level overview and POD stability
 
@@ -32,10 +29,10 @@
 - Golden configuration:
   - Grid: Nx=60, Nz=30, Lx=Lz=100.
   - Global damping: $\alpha$ = 1.0 applied on the velocity block; boundary absorption ≈5.
-  - Full system stability: dense eig of `A gives max $\operatorname{Re}(\lambda)$ ≈ −0.5, min $\operatorname{Re}(\lambda)$ ≈ −0.5 → full model is stable.
+  - Full system stability: dense eig of A gives max $\operatorname{Re}(\lambda)$ ≈ −0.5, min $\operatorname{Re}(\lambda)$ ≈ −0.5 → full model is stable.
 - Reference trajectory:
-  - Input: band-limited ping around 3 kHz (scaled by 1e6).
-  - Integrator: RK45 with tight tolerances; confidence error between nominal and tighter runs ≈1.7e−4.
+  - Input: current tests use a 20 Hz sinusoid (scaled by $10^6$); earlier 3 kHz runs were not well-resolved.
+  - Integrator: RK45 with tight tolerances; confidence error between nominal and tighter runs ≈1.1e−8 at 20 Hz.
   - This confidence level is our target accuracy for reduced models.
 
 ## Summary of MOR attempts and results
@@ -79,7 +76,7 @@
 ## Why POD+Galerkin fails to preserve stability here
 
 - The full system is stable because there exists an energy matrix P such that:
-  - Aᵀ P + P A ≺ 0`, i.e., the energy decays over time.
+  - $A^T P + P A \\prec 0$, i.e., the energy decays over time.
 - Plain POD constructs V that is orthonormal in the **Euclidean** norm (or a crude diagonal surrogate for P) and then uses a Galerkin projection:
   - $\hat{A}$ = Vᵀ A V.
 - For damped wave / Hamiltonian-like systems, this projection is **not** structure-preserving:
@@ -137,18 +134,18 @@
 
 - **Stability / damping observations and suggested fix**
   - While doing ODE stability checks, we noticed:
-    - Global absorption $\alpha$ is currently `0.0001` (very small).
-    - Boundary absorption is `5 (large).
+    - Global absorption $\alpha$ is currently $1e-4$ (very small).
+    - Boundary absorption is 5 (large).
     - This combination leads to real eigenvalues (not purely imaginary), which hurts the wave-equation-like stability structure.
   - For MOR, we suggest:
-    - Increasing $\alpha$ via getParam_Sonar` (now accepts an alpha argument) so the system is more strongly damped and has no positive real eigenvalues.
-    - On a small grid, computing eigenvalues explicitly and checking that there are no eigenvalues with positive real part for the chosen timestep `dt.
+    - Increasing $\alpha$ via `getParam_Sonar` (now accepts an alpha argument) so the system is more strongly damped and has no positive real eigenvalues.
+    - On a small grid, computing eigenvalues explicitly and checking that there are no eigenvalues with positive real part for the chosen timestep dt.
     - Using the eigenvalue code Manny pushed for Task C as a reference.
 
 - **Integrator / time-step observations (Task C)**
-  - The $dt_{\max,\mathrm{FE}}$ returned from getParam_Sonar is effectively too optimistic for Leapfrog: in practice, stability requires $dt \approx 0.5\, dt_{\max,\mathrm{FE}}$.
-  - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (solve_ivp implicit methods) remains stable at larger `dt` and is attractive when we can tolerate some error on the second hydrophone.
-  - For large grids, MOR would be most beneficial because running with truly stable `dt values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
+  - The $dt_{\max,\mathrm{FE}}$ returned from `getParam_Sonar` is effectively too optimistic for Leapfrog: in practice, stability requires $dt \approx 0.5\, dt_{\max,\mathrm{FE}}$.
+  - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (solve_ivp implicit methods) remains stable at larger dt and is attractive when we can tolerate some error on the second hydrophone.
+  - For large grids, MOR would be most beneficial because running with truly stable dt values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
 
 - **Stability sweep findings (small grid)**
   - Scanning $\alpha$ ∈ {1e-4, 1e-2, 0.5, 1.0} on the small grid: max $\operatorname{Re}(\lambda)$ < 0 in all cases (~ -$\alpha$/2). Damping shifts the spectrum left but does not change $dt_{\max,\mathrm{FE}}$ (≈2.95e-5), which is set by the Laplacian CFL.
