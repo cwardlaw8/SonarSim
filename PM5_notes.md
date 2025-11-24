@@ -44,6 +44,11 @@
   - With this tighter CFL, Leapfrog is stable but still sensitive; Trapezoidal (`solve_ivp` implicit methods) remains stable at larger `dt` and is attractive when we can tolerate some error on the second hydrophone.
   - For large grids, MOR would be most beneficial because running with truly stable `dt` values is expensive; there is also significant aliasing at higher frequencies that needs to be considered in how we choose grid and time step.
 
+- **Stability sweep findings (small grid)**
+  - Scanning `alpha` ∈ {1e-4, 1e-2, 0.5, 1.0} on the small grid: max Re(λ) < 0 in all cases (~ -alpha/2). Damping shifts the spectrum left but does not change `dt_max_FE` (≈2.95e-5), which is set by the Laplacian CFL.
+  - For Leapfrog, still use `dt ≈ 0.5 * dt_max_FE`; damping does not loosen the CFL.
+  - For MOR tests, adopt a damped “golden” model (e.g., alpha 0.5–1.0) and prefer implicit (Trapezoidal/Radau) for timing on larger grids; keep dt small enough for 3 kHz to avoid aliasing even if the integrator is stable.
+
 - **Where things are / recommendations**
   - Manny will focus on explicit vs. implicit integrator comparisons and likely not push POD much further in time for PM5.
   - He thinks our results are still presentable if we clearly state:
