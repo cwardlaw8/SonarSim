@@ -7,7 +7,7 @@ We propose a simulation tool for emulating acoustic impulses under water. Our to
 
 ## Dual use and misuse of our simulator
 - Military/surveillance uses
-- Greenwashing by modelling
+- Greenwashing by modeling
 - Other incentives misaligned with ethics
 
 ## Limitations of our system
