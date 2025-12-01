@@ -1,6 +1,24 @@
 \documentclass[conference]{IEEEtran}
 
-\input{overleafsettings-PS-PM.tex}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{textcomp}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{float}
+\renewcommand{\rmdefault}{cmr}
+\renewcommand{\sfdefault}{cmss}
+\renewcommand{\ttdefault}{cmtt}
+
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\ud}{\,\mathrm{d}}
 
 \begin{document}
 
@@ -86,11 +104,13 @@ c^2 L & -\alpha I_{N}
 B = \begin{bmatrix} 0 \\ b \end{bmatrix}
 \end{equation}
 Here $L \in \mathbb{R}^{N\times N}$ is the discrete Laplacian matrix and $b \in \mathbb{R}^{N}$ is the spatial source distribution with a single nonzero entry $b_{k_{src}} = 1/(\Delta x \Delta z)$ at the source location. The complete system of ODEs in standard form is:
-\begin{eqnarray}
+\begin{equation}
 \label{eqn:StateSpaceModel}
-\frac{dp_{i,j}}{dt} &=& w_{i,j} \quad \text{for all } (i,j) \nonumber \\
-\frac{dw_{i,j}}{dt} &=& c^2 (L p)_{i,j} - \alpha w_{i,j} + b_{i,j} u(t) \quad \text{for all } (i,j) \nonumber
-\end{eqnarray}
+\begin{aligned}
+\frac{dp_{i,j}}{dt} &= w_{i,j} && \text{for all } (i,j) \\
+\frac{dw_{i,j}}{dt} &= c^2 (L p)_{i,j} - \alpha w_{i,j} + b_{i,j} u(t) && \text{for all } (i,j)
+\end{aligned}
+\end{equation}
 where $(L p)_{i,j}$ denotes the discretized Laplacian applied to the pressure field. This defines the dynamical system $\frac{dx}{dt}=f(x,p,u)$ where $f$ implements the equations above.
 
 The quantities of interest are the received acoustic pressures at hydrophone locations:

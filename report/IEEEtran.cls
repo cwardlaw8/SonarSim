@@ -492,12 +492,12 @@
 % The IEEE uses Times Roman font, so we'll default to Times.
 % These three commands make up the entire times.sty package.
 \renewcommand{\sfdefault}{phv}
-\renewcommand{\rmdefault}{ptm}
+\renewcommand{\rmdefault}{cmr}
 \renewcommand{\ttdefault}{pcr}
 
 % V1.7 compsoc nonconference papers, use Palatino/Palladio as the main text font,
 % not Times Roman.
-\@IEEEcompsocnotconfonly{\renewcommand{\rmdefault}{ppl}}
+\@IEEEcompsocnotconfonly{\renewcommand{\rmdefault}{cmr}}
 
 % enable the selected main text font
 \normalfont\selectfont
@@ -6344,4 +6344,3 @@ Use \@IEEEbackslash #2 instead.}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% End of IEEEtran.cls  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % That's all folks!
-
