@@ -11,3 +11,5 @@ report/main.fls
 report/main.log
 report/main.out
 report/missfont.log
+
+*.gif
