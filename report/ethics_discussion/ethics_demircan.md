@@ -1,0 +1,12 @@
+# Internal Team Meeting
+
+**Date:** 2026-11-30, 12:00 PM
+**Location:** Building 32 - Stata Center
+**Attendees:** Camille Wardlaw, Manuel Valencia, Demircan Tas
+
+I argued that building a simulation tool may have a future increase in underwater noise levels by increasing research activity. Our tool may inadvertantly enable higher acoustic levels at specific frequencies by tuning out more visible ones. Adverse impacts on underwater wildlife that are hard to detect initially may increase. I also emphasized that the limitations of our model, if not clearly acknowledged, may lead to under-predicting exposure in physical, complex environments. As a team, we agreed that we should be clear that our simulator is an exploratory tool and not a full regulatory standard. We want to document our assumptions and limitations so users do not over-trust our results. We also want to make our work openly available, with plain language explanations, so that communities affected by underwater noise can use the same tools that industry and researchers have.
+
+Manuel stated that multiple communities are exposed by the effects of underwater noise levels. Proprietary tools and models may lead to lack of access by some communities while enabling others. Corporate actors may use their access to software resources to benefit from an assymettry when justifying decisions that serve their benefit. Open-sourcing our tools may be a potent solution. We also acknowledged that communities affected by underwater noise may not have the time, data, or training to work with complex software. For our open source simulator to actually support them, we need clear examples and documentation that connect to real situations like shipping lanes or coastal construction. This would make it easier for those communities to question or verify impact assessments that others present to them.
+
+Camille pointed out that proprietary software for research may create tensions among research bodies and the military. Military research is often opaque, providing impunity against the negative effects of research on the nature and vulnureable communities. She also argued that open sourcing our work would mitigate the aforementioned tension. We also discussed that collecting data for validation and monitoring can itself add more noise to the water. Extra ship time, engines, and active sonar for surveys may harm the same ecosystems we are trying to protect. This means even conservation focused work has to be careful about how much new noise it creates and when it is justified.
+
