@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, alpha=0.0001):
+def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, alpha=0.001, BC=False):
     """
     Defines the parameters for 2D acoustic wave equation for sonar propagation.
     Returns matrices for the linear system representation dx/dt = p.A x + p.B u
@@ -41,20 +41,18 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, 
         'Nz': Nz,              # grid points in z
         'Lx': Lx,              # domain size x (m)
         'Lz': Lz,              # domain size z (m)
-        'sonar_ix': Nx//4,     # source position x
-        'sonar_iz': Nz//2,     # source position z
+        'sonar_ix': Nx//2,     # source position x
+        'sonar_iz': 1,         # source position z
         'absorb_strength': absorb_strength # strength of absorbing boundary
     }
     
     n_phones = 5
-    spacing = max(1, (Nx-Nx//2)//(n_phones-1))
-    
     p['hydrophones'] = {
-        'z_pos': Nz//2,
-        'x_indices': [Nx//4 + i*spacing for i in range(n_phones)],
+        'z_pos': Nz // 2,
+        'x_indices': np.linspace(Nx//8, Nx - Nx//8, n_phones, dtype=int).tolist(),
         'n_phones': n_phones
     }
-    
+
     p['dx'] = Lx / (Nx - 1)
     p['dz'] = Lz / (Nz - 1)
     
@@ -150,6 +148,21 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, 
         p['A'] = np.block([[np.zeros((N, N)), np.eye(N)],
                           [L, -p['alpha']*np.eye(N)]])
         p['B'] = np.zeros((2*N, 1))
+
+    if BC:
+        # Enforce p=0 at surface (j=0) - Dirichlet boundary condition
+        if UseSparseMatrices:
+            A_lil = p['A'].tolil() # type: ignore
+            for i in range(Nx):
+                k = i * Nz  # surface node (j=0)
+                A_lil[k, :] = 0      # dp/dt = 0
+                A_lil[N + k, :] = 0  # dv/dt = 0
+            p['A'] = A_lil.tocsr()
+        else:
+            for i in range(Nx):
+                k = i * Nz
+                p['A'][k, :] = 0
+                p['A'][N + k, :] = 0
     
     # source location
     # Scale source by cell area so the effective source is grid-invariant.
@@ -164,8 +177,9 @@ def getParam_Sonar(Nx, Nz, Lx, Lz, UseSparseMatrices=True, absorb_strength=5.0, 
     # initial conditions
     x_start = np.zeros((2*N, 1))
     # small deterministic noise in pressure for reproducible visuals
-    rng = np.random.default_rng(0)
-    x_start[:N] = rng.standard_normal((N, 1)) * 1e-10
+    #rng = np.random.default_rng(0)
+    #x_start[:N] = rng.standard_normal((N, 1)) * 1e-10
+    #x_start[:N] = rng.standard_normal((N, 1)) * 0
     
     t_start = 0
     t_cross = max(Lx, Lz) / p['c']

@@ -125,7 +125,7 @@ def LeapfrogSolver(eval_f, x_start, p, eval_u, NumIter, dt, visualize=False, gif
     return X, t
 
 
-def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE):
+def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE, duration=10):
     """
     Compare Forward Euler vs Leapfrog stability for your system.
     """
@@ -135,8 +135,8 @@ def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE):
     print("="*60)
     
     # Short test duration
-    test_duration = 0.5  # seconds
-    dt = max_dt_FE * 0.5
+    test_duration = duration # seconds
+    dt = max_dt_FE * 0.1
     num_iter = int(test_duration / dt)
     
     # Run both solvers

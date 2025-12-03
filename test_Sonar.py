@@ -2,13 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from getParam_Sonar import getParam_Sonar
 from eval_f_Sonar import eval_f_Sonar
-from eval_u_Sonar import eval_u_Sonar
 from eval_g_Sonar import eval_g_Sonar
 from eval_Jf_Sonar import eval_Jf_Sonar
 from eval_Jf_FiniteDifference import eval_Jf_FiniteDifference
 from SimpleSolver import SimpleSolver
 
-def test_sonar_complete():
+def test_sonar_complete(eval_u):
     """Complete test suite for sonar model including Jacobian tests"""
     
     print("="*60)
@@ -59,7 +58,7 @@ def test_sonar_complete():
     # TEST 3: Source excitation
     print("\nTEST 3: Source Excitation")
     print("-"*40)
-    u_test = eval_u_Sonar(0.0001)  # At pulse time
+    u_test = eval_u(0.1)  # At pulse time
     
     if abs(u_test) > 0:
         print(f"✓ PASSED: Source generates signal: {u_test:.2e} Pa")
@@ -105,7 +104,7 @@ def test_sonar_complete():
     w = dt * 0.1
     num_iter = 10
     
-    [X, t] = SimpleSolver(eval_f_Sonar, x0, p, eval_u_Sonar, 
+    [X, t] = SimpleSolver(eval_f_Sonar, x0, p, eval_u, 
                          num_iter, w, visualize=False)
     
     initial_energy = np.sum(X[:, 0]**2)
