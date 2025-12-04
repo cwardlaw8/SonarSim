@@ -71,9 +71,10 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
         p['sonar_ix'] = Nx // 2
         p['sonar_iz'] = Nz // 2
     elif source_position == 'surface':
-        # Surface (z=0), center of domain horizontally
+        # Near-surface (z=1, just below surface), center of domain horizontally
+        # NOTE: Can't use z=0 because that's the pressure-release boundary (p=0)
         p['sonar_ix'] = Nx // 2
-        p['sonar_iz'] = 0
+        p['sonar_iz'] = 1
     elif isinstance(source_position, (tuple, list)) and len(source_position) == 2:
         p['sonar_ix'] = source_position[0]
         p['sonar_iz'] = source_position[1]
@@ -90,22 +91,26 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     
     # Configure hydrophones
     if hydrophone_config == 'horizontal':
-        # 5 equally-spaced hydrophones at mid-depth, centered on domain
+        # 5 equally-spaced hydrophones at mid-depth, avoiding edges (absorbing boundaries)
         z_pos = Nz // 2
-        x_indices = [Nx * i // 4 for i in range(5)]  # 0, 1/4, 1/2, 3/4, 1 of domain
+        n_phones = 5
+        # Divide domain into n_phones+1 segments, place hydrophones at segment boundaries (excluding edges)
+        x_indices = [(Nx - 1) * (i + 1) // (n_phones + 1) for i in range(n_phones)]
         p['hydrophones'] = {
             'z_pos': z_pos,
             'x_indices': x_indices,
-            'n_phones': 5
+            'n_phones': n_phones
         }
     elif hydrophone_config == 'vertical':
-        # 5 equally-spaced hydrophones vertically at center x-position
+        # 5 equally-spaced hydrophones vertically at center x-position, avoiding edges
         x_pos = Nx // 2
-        z_indices = [Nz * i // 4 for i in range(5)]  # 0, 1/4, 1/2, 3/4, 1 of domain
+        n_phones = 5
+        # Divide domain into n_phones+1 segments, place hydrophones at segment boundaries (excluding edges)
+        z_indices = [(Nz - 1) * (i + 1) // (n_phones + 1) for i in range(n_phones)]
         p['hydrophones'] = {
             'x_pos': x_pos,
             'z_indices': z_indices,
-            'n_phones': 5
+            'n_phones': n_phones
         }
     elif isinstance(hydrophone_config, dict):
         # Custom configuration

@@ -77,19 +77,30 @@ def visualize_sonar_setup(p, show_grid=True, show_boundary_labels=True):
                         color='red', fill=False, linewidth=2, alpha=0.5)
     ax.add_patch(circle)
     
-    # Plot hydrophone array
-    hydrophone_z = p['hydrophones']['z_pos'] * p['dz']
-    for i, x_idx in enumerate(p['hydrophones']['x_indices']):
-        hydrophone_x = x_idx * p['dx']
-        ax.plot(hydrophone_x, hydrophone_z, 'b^', markersize=12, 
-                markeredgecolor='darkblue', markeredgewidth=1)
-        # Label each hydrophone
-        ax.text(hydrophone_x, hydrophone_z - p['dz']*1.5, f'H{i}', 
-                ha='center', va='top', fontsize=8, color='blue')
+    # Plot hydrophone array (handle both horizontal and vertical configurations)
+    if 'z_pos' in p['hydrophones']:
+        # Horizontal array: all hydrophones at same depth
+        hydrophone_z = p['hydrophones']['z_pos'] * p['dz']
+        for i, x_idx in enumerate(p['hydrophones']['x_indices']):
+            hydrophone_x = x_idx * p['dx']
+            ax.plot(hydrophone_x, hydrophone_z, 'b^', markersize=12, 
+                    markeredgecolor='darkblue', markeredgewidth=1)
+            # Label each hydrophone
+            ax.text(hydrophone_x, hydrophone_z - p['dz']*1.5, f'H{i+1}', 
+                    ha='center', va='top', fontsize=8, color='blue')
+    elif 'x_pos' in p['hydrophones']:
+        # Vertical array: all hydrophones at same x position
+        hydrophone_x = p['hydrophones']['x_pos'] * p['dx']
+        for i, z_idx in enumerate(p['hydrophones']['z_indices']):
+            hydrophone_z = z_idx * p['dz']
+            ax.plot(hydrophone_x, hydrophone_z, 'b^', markersize=12, 
+                    markeredgecolor='darkblue', markeredgewidth=1)
+            # Label each hydrophone
+            ax.text(hydrophone_x + p['dx']*1.5, hydrophone_z, f'H{i+1}', 
+                    ha='left', va='center', fontsize=8, color='blue')
     
     # Add hydrophone array label
     if p['hydrophones']['n_phones'] > 0:
-        first_hydro_x = p['hydrophones']['x_indices'][0] * p['dx']
         ax.plot([], [], 'b^', markersize=12, label='Hydrophone array')
     
     # Add wavelength indicator for scale

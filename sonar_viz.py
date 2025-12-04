@@ -59,14 +59,24 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
 
     if overlay:
         try:
+            # Plot source
             sx = p['sonar_ix'] * dx
             sz = p['sonar_iz'] * dz
             ax.plot([sx], [sz], marker='*', color='yellow', markersize=12, markeredgecolor='k')
+            
+            # Plot hydrophones (handle both horizontal and vertical arrays)
             hp = p.get('hydrophones', {})
             if hp.get('n_phones', 0) > 0:
-                zpos = hp['z_pos'] * dz
-                for x_idx in hp['x_indices']:
-                    ax.plot(x_idx * dx, zpos, '^', color='white', markersize=6, markeredgecolor='k', alpha=0.85)
+                if 'z_pos' in hp and 'x_indices' in hp:
+                    # Horizontal array: same z, varying x
+                    zpos = hp['z_pos'] * dz
+                    for x_idx in hp['x_indices']:
+                        ax.plot(x_idx * dx, zpos, '^', color='white', markersize=6, markeredgecolor='k', alpha=0.85)
+                elif 'x_pos' in hp and 'z_indices' in hp:
+                    # Vertical array: same x, varying z
+                    xpos = hp['x_pos'] * dx
+                    for z_idx in hp['z_indices']:
+                        ax.plot(xpos, z_idx * dz, '^', color='white', markersize=6, markeredgecolor='k', alpha=0.85)
         except Exception:
             pass
 
