@@ -42,7 +42,7 @@ def getParam_Sponge(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0
     """
     2D acoustic wave equation with SPONGE LAYER absorbing boundaries.
     
-    State vector: x = [p; v] (2N variables)
+    State vector: x = [w; p] where w = dp/dt (2N variables)
     """
     # Grid setup
     dx = Lx / (Nx - 1)
@@ -102,25 +102,27 @@ def getParam_Sponge(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0
     sonar_ix, sonar_iz = Nx // 4, Nz // 2
     source_idx = idx(sonar_ix, sonar_iz)
     
-    # Build state-space system
+    # Build state-space system with new ordering: x = [w, p]
+    # dw/dt = -damping*w + L*p  =>  A = [-damping*I,  L    ]
+    # dp/dt = w                 =>      [I,            0    ]
     if UseSparseMatrices:
         D = sp.diags(-total_damping, 0, format='csr')
         A = sp.bmat([
-            [sp.csr_matrix((N, N)), sp.eye(N, format='csr')],
-            [L.tocsr(), D]
+            [D, L.tocsr()],
+            [sp.eye(N, format='csr'), sp.csr_matrix((N, N))]
         ]).tocsr()
         B = sp.lil_matrix((2*N, 1), dtype=float)
-        B[N + source_idx, 0] = 1.0 / (dx * dz)
+        B[source_idx, 0] = 1.0 / (dx * dz)  # Source in w indices (first half)
         B = B.tocsr()
     else:
         L = L.toarray()
         D = np.diag(-total_damping)
         A = np.block([
-            [np.zeros((N, N)), np.eye(N)],
-            [L, D]
+            [D, L],
+            [np.eye(N), np.zeros((N, N))]
         ])
         B = np.zeros((2*N, 1))
-        B[N + source_idx, 0] = 1.0 / (dx * dz)
+        B[source_idx, 0] = 1.0 / (dx * dz)  # Source in w indices (first half)
     
     # Hydrophone array setup
     n_phones = 5
@@ -147,10 +149,12 @@ def getParam_Sponge(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0
         'sponge_damping': sponge_damping,
     }
     
-    # Initial conditions
+    # Initial conditions with new ordering [w, p]
     x0 = np.zeros((2*N, 1))
     rng = np.random.default_rng(0)
-    x0[:N] = rng.standard_normal((N, 1)) * 0
+    # x0[:N] = initial w (velocity) - typically zero
+    # x0[N:] = initial p (pressure) - typically zero
+    x0[N:] = rng.standard_normal((N, 1)) * 0
     
     t_start = 0.0
     t_stop = max(Lx, Lz) / c
@@ -186,7 +190,8 @@ def getParam_PML(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0,
     """
     2D acoustic wave equation with PML (Perfectly Matched Layer) boundaries.
     
-    State vector: x = [p; vx; vz; ψ] (4N variables)
+    State vector: x = [vx; vz; ψ; p] (4N variables)
+    Note: PML uses a different ordering to keep velocities first, then auxiliary, then pressure
     """
     # Grid setup
     dx = Lx / (Nx - 1)
@@ -250,19 +255,24 @@ def getParam_PML(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0,
     rho_c2 = rho * c**2
     inv_rho = 1.0 / rho
     
-    # State: [p; vx; vz; ψ]
+    # State reordered: [vx; vz; ψ; p] (velocities first, pressure last)
+    # dvx/dt = -Alpha_Sigma*vx - inv_rho*Dx*p
+    # dvz/dt = -Alpha*vz - inv_rho*Dz*p
+    # dψ/dt = -Alpha_Sigma*ψ - rho_c2*Dz*p
+    # dp/dt = -Alpha_Sigma*p + vx + Sigma_x*vx - rho_c2*Dx*vx - rho_c2*Dz*vz + Sigma_x*ψ
+    # Reorganizing blocks:
     A = sp.bmat([
-        [-Alpha_Sigma,      -rho_c2 * Dx, -rho_c2 * Dz, Sigma_x],
-        [-inv_rho * Dx,     -Alpha_Sigma, Z,            Z],
-        [-inv_rho * Dz,     Z,            -Alpha,       Z],
-        [Z,                 Z,            -rho_c2 * Dz, -Alpha_Sigma]
+        [-Alpha_Sigma, Z,            Z,            -inv_rho * Dx],      # dvx/dt
+        [Z,            -Alpha,       Z,            -inv_rho * Dz],      # dvz/dt  
+        [Z,            Z,            -Alpha_Sigma, -rho_c2 * Dz],       # dψ/dt
+        [-rho_c2 * Dx, -rho_c2 * Dz, Sigma_x,      -Alpha_Sigma]        # dp/dt
     ]).tocsr()
     
-    # Source injection
+    # Source injection - now in vx (first block) to match main code pattern
     sonar_ix, sonar_iz = Nx // 4, Nz // 2
     source_idx = idx(sonar_ix, sonar_iz)
     B = sp.lil_matrix((4*N, 1), dtype=float)
-    B[source_idx, 0] = 1.0 / (dx * dz)
+    B[source_idx, 0] = 1.0 / (dx * dz)  # Source in vx indices
     B = B.tocsr()
     
     if not UseSparseMatrices:
@@ -293,13 +303,17 @@ def getParam_PML(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0,
         'pml_profile': pml_profile,
         'sigma_x': sigma_x,
         'state_size': 4*N,
-        'state_layout': {'p': (0, N), 'vx': (N, 2*N), 'vz': (2*N, 3*N), 'psi': (3*N, 4*N)},
+        'state_layout': {'vx': (0, N), 'vz': (N, 2*N), 'psi': (2*N, 3*N), 'p': (3*N, 4*N)},
     }
     
-    # Initial conditions
+    # Initial conditions with new ordering [vx, vz, ψ, p]
     x0 = np.zeros((4*N, 1))
     rng = np.random.default_rng(0)
-    x0[:N] = rng.standard_normal((N, 1)) * 0
+    # x0[0:N] = initial vx (x-velocity) - typically zero
+    # x0[N:2N] = initial vz (z-velocity) - typically zero  
+    # x0[2N:3N] = initial ψ (auxiliary) - typically zero
+    # x0[3N:4N] = initial p (pressure) - typically zero
+    x0[3*N:4*N] = rng.standard_normal((N, 1)) * 0
     
     t_start = 0.0
     t_stop = max(Lx, Lz) / c
@@ -315,4 +329,11 @@ def getParam_PML(Nx, Nz, Lx, Lz, UseSparseMatrices=True, c=1500.0, rho=1025.0,
 def extract_pressure(x, p):
     """Extract pressure field from state vector for either method."""
     N = p['N']
-    return x[:N].reshape((p['Nx'], p['Nz']), order='C')
+    boundary_type = p.get('boundary_type', 'sponge')
+    
+    if boundary_type == 'pml':
+        # PML state: [vx, vz, ψ, p] - pressure is in last N elements
+        return x[3*N:4*N].reshape((p['Nx'], p['Nz']), order='C')
+    else:
+        # Sponge state: [w, p] - pressure is in last N elements  
+        return x[N:2*N].reshape((p['Nx'], p['Nz']), order='C')

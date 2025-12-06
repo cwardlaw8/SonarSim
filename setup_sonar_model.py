@@ -59,7 +59,7 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     
     # Get base parameters from getParam_Sonar
     p, x_start, t_start, t_stop, max_dt_FE = getParam_Sonar(
-        Nx, Nz, Lx, Lz, UseSparseMatrices=UseSparseMatrices, BC=BC
+        Nx, Nz, Lx, Lz, UseSparseMatrices=UseSparseMatrices, enforce_surface_BC=BC
     )
     
     # Extend simulation time
@@ -82,11 +82,12 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
         raise ValueError(f"Unknown source_position: {source_position}")
     
     # Rebuild B matrix with new source location
+    # New ordering: x = [w, p], so source goes in first half (w indices)
     N = Nx * Nz
     source_idx = p['sonar_ix'] * Nz + p['sonar_iz']
     
     B_lil = sp.lil_matrix((2*N, 1), dtype=float)
-    B_lil[N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
+    B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])  # Source in w indices (first half)
     p['B'] = B_lil.tocsr()
     
     # Configure hydrophones
