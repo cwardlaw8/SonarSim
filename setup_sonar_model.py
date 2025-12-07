@@ -4,7 +4,7 @@ Wrapper function for consistent sonar model setup with eval_u_Sonar_20.
 import numpy as np
 from scipy import sparse as sp
 from getParam_Sonar import getParam_Sonar
-from eval_u_Sonar import eval_u_Sonar_20
+from eval_u_Sonar import eval_u_Sonar_20_const
 from eval_f_Sonar import eval_f_Sonar
 from eval_g_Sonar import eval_g_Sonar
 
@@ -86,7 +86,7 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     source_idx = p['sonar_ix'] * Nz + p['sonar_iz']
     
     B_lil = sp.lil_matrix((2*N, 1), dtype=float)
-    B_lil[N + source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
+    B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     p['B'] = B_lil.tocsr()
     
     # Configure hydrophones
@@ -124,7 +124,7 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     
     # Create scaled input function (accounts for cell area)
     def eval_u_scaled(t):
-        return (p['dx'] * p['dz']) * eval_u_Sonar_20(t)
+        return (p['dx'] * p['dz']) * eval_u_Sonar_20_const(t)
     
     # Assemble complete model dictionary
     model = {
@@ -137,7 +137,7 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
         
         # Functions
         'eval_f': eval_f_Sonar,
-        'eval_u': eval_u_Sonar_20,
+        'eval_u': eval_u_Sonar_20_const,
         'eval_u_scaled': eval_u_scaled,
         'eval_g': eval_g_Sonar,
         
