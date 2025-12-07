@@ -8,7 +8,7 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
 
     Parameters
     - p: dict of simulation parameters (expects keys 'Nx','Nz','Lx','Lz','dx','dz', and optional 'hydrophones')
-    - X: ndarray of shape (2*N, T), state over time where first N entries are pressure
+    - X: ndarray of shape (2*N, T), state over time where state = [w; p] (velocity and pressure)
     - t: 1D array-like of length T with time stamps (seconds)
     - index: optional integer frame index to plot
     - time_s: optional float time (s); nearest index is selected if provided
@@ -33,9 +33,9 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
             index = int(np.argmin(np.abs(t_arr - float(time_s))))
     index = int(max(0, min(index, X.shape[1] - 1)))
 
-    # Extract and reshape pressure field
+    # Extract and reshape pressure field (second half of state: x[N:2N])
     x_i = np.asarray(X[:, index]).reshape(-1)
-    field = x_i[:N].reshape(Nx, Nz).T  # plot as (Z, X)
+    field = x_i[N:2*N].reshape(Nx, Nz).T  # plot as (Z, X)
 
     vmin = vmax = None
     if sym:

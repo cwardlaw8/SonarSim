@@ -86,9 +86,13 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     N = Nx * Nz
     source_idx = p['sonar_ix'] * Nz + p['sonar_iz']
     
-    B_lil = sp.lil_matrix((2*N, 1), dtype=float)
-    B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])  # Source in w indices (first half)
-    p['B'] = B_lil.tocsr()
+    if UseSparseMatrices:
+        B_lil = sp.lil_matrix((2*N, 1), dtype=float)
+        B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])  # Source in w indices (first half)
+        p['B'] = B_lil.tocsr()
+    else:
+        p['B'] = np.zeros((2*N, 1))
+        p['B'][source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     
     # Configure hydrophones
     if hydrophone_config == 'horizontal':

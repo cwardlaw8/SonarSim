@@ -7,7 +7,7 @@ def create_wave_animation(X, t, p, save_filename='wave_animation.gif', frame_ski
     Create an animation of wave propagation in the 2D container
     
     Parameters:
-    X: state matrix (2*Nx*Nz, num_timesteps)
+    X: state matrix (2*Nx*Nz, num_timesteps) where state = [w; p] (velocity and pressure)
     t: time vector
     p: parameter dictionary containing grid info
     save_filename: name for the saved animation
@@ -18,9 +18,9 @@ def create_wave_animation(X, t, p, save_filename='wave_animation.gif', frame_ski
     Nx, Nz = p['Nx'], p['Nz']
     dx, dz = p['dx'], p['dz']
     
-    # Extract pressure field (first half of state vector)
+    # Extract pressure field (second half of state vector: x[N:2N])
     N = Nx * Nz
-    pressure_history = X[:N, :].reshape(Nx, Nz, -1)
+    pressure_history = X[N:2*N, :].reshape(Nx, Nz, -1)
     
     # Create coordinate grids for plotting
     x_coords = np.arange(Nx) * dx

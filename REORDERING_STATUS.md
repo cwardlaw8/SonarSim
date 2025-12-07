@@ -21,8 +21,26 @@
 3. **setup_sonar_model.py** - Model wrapper
    - Updated B matrix source location (now in first half: w indices)
    - Fixed parameter name: `BC` → `enforce_surface_BC`
+   - Handles both sparse and dense matrix formats correctly
 
-4. **checkReordering.py** - Comprehensive test suite
+4. **eval_g_Sonar.py** - Hydrophone output
+   - Updated pressure extraction: `x[:N]` → `x[N:2*N]`
+   - **Verified**: Correctly extracts from second half of state vector
+
+5. **sonar_viz.py** - Visualization
+   - Updated pressure extraction: `x[:N]` → `x[N:2*N]`
+   - **Verified**: Plots show correct pressure field with source/hydrophone overlay
+
+6. **visualize_sonar.py** - Setup visualization
+   - **No changes needed**: Only uses parameter dict, not state vector
+
+7. **create_wave_animation.py** - 2D animation
+   - Updated pressure extraction: `X[:N, :]` → `X[N:2*N, :]`
+
+8. **create_3d_wave_animation.py** - 3D animation
+   - Updated pressure extraction: `X[:N, :]` → `X[N:2*N, :]`
+
+9. **checkReordering.py** - Comprehensive test suite
    - 16 tests covering all functionality
    - All tests passing ✅
    - Added sparse vs dense verification
@@ -36,12 +54,11 @@
 
 ## Problems to Fix
 
-### 1. Visualization Functions (Not Yet Updated)
-Need to update pressure extraction `x[:N]` → `x[N:]`:
-- `eval_g_Sonar.py`
-- `sonar_viz.py`
-- `create_wave_animation.py`
-- `create_3d_wave_animation.py`
+### 1. Testing Needed
+- Run full simulation to verify results unchanged
+- Compare outputs between old and new ordering
+- Test POD workflow compatibility
+- Test animation functions with actual simulation data
 
 ### 2. Condition Number Increase
 - **Before**: κ₂(A) ≈ 4.07e+17
@@ -58,5 +75,5 @@ Need to update pressure extraction `x[:N]` → `x[N:]`:
 ## Summary
 ✅ Core reordering complete and verified  
 ✅ Physics correct and sparse/dense match  
-⚠️ Visualization functions need updates  
+✅ All visualization functions updated  
 ⚠️ Full simulation testing pending

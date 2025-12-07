@@ -4,12 +4,16 @@ def eval_g_Sonar(x, p, u=None):
     """
     Output: pressure at hydrophone array
     
+    State ordering: x = [w_1, ..., w_N, p_1, ..., p_N]
+    Pressure is in second half: x[N:2N]
+    
     Supports two formats:
     1. Original: z_pos (scalar) + x_indices (list) for horizontal array
     2. Tuple-based: x_indices + z_indices (both lists) for any configuration
     """
     N = p['Nx'] * p['Nz']
-    pressure = x[:N].reshape(p['Nx'], p['Nz'])
+    # Extract pressure from second half of state vector (new [w,p] ordering)
+    pressure = x[N:2*N].reshape(p['Nx'], p['Nz'])
     
     # extract pressure at each hydrophone
     hydrophone_signals = []
