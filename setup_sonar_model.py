@@ -9,12 +9,12 @@ from eval_f_Sonar import eval_f_Sonar
 from eval_g_Sonar import eval_g_Sonar
 
 
-def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20, 
+def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20, 
                       BC=True, UseSparseMatrices=True,
-                      source_position='center', hydrophone_config='horizontal',
-                      t_extra=1.0):
+                      source_position='surface', hydrophone_config='Horizontal',
+                      t_extra=0):
     """
-    Complete sonar model setup with eval_u_Sonar_20 (time-varying 20Hz signal).
+    Complete sonar model setup with eval_u_Sonar_20_const (constant 20Hz signal).
     
     Parameters:
     -----------
@@ -162,6 +162,19 @@ def setup_sonar_model(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     }
     
     return model
+
+def setup_sonar_model(Nx=301, Nz=21, Lx=8000, Lz=1000, f0=20, 
+                      BC=True, UseSparseMatrices=True,
+                      source_position='vertical', hydrophone_config='horizontal',
+                      t_extra=0.0):
+    """
+    Wrapper for setup_sonar_model_full using smaller grid for quicker runs.
+    """
+    return setup_sonar_model_full(Nx=Nx, Nz=Nz, Lx=Lx, Lz=Lz, f0=f0,
+                                  BC=BC, UseSparseMatrices=UseSparseMatrices,
+                                  hydrophone_config=hydrophone_config,
+                                  source_position=source_position,
+                                  t_extra=t_extra)
 
 
 def print_model_info(model, verbose=True):
