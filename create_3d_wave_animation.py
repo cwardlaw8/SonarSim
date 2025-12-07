@@ -21,9 +21,9 @@ def create_3d_wave_animation(X, t, p, save_filename='wave_3d_animation.gif',
     Nx, Nz = p['Nx'], p['Nz']
     dx, dz = p['dx'], p['dz']
     
-    # Extract pressure field (first half of state vector)
+    # Extract pressure field (second half of state vector)
     N = Nx * Nz
-    pressure_history = X[:N, :].reshape(Nx, Nz, -1)
+    pressure_history = X[N:2*N, :].reshape(Nx, Nz, -1)  # CHANGED: was X[:N, :]
     
     # Create coordinate grids
     x_coords = np.arange(Nx) * dx

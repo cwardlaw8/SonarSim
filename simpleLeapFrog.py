@@ -134,12 +134,10 @@ def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE, duration=10):
     print("SOLVER STABILITY COMPARISON")
     print("="*60)
     
-    # Short test duration
-    test_duration = duration # seconds
+    test_duration = duration
     dt = max_dt_FE * 0.1
     num_iter = int(test_duration / dt)
     
-    # Run both solvers
     print("\n1. Testing SimpleSolver (Forward Euler)...")
     from SimpleSolver import SimpleSolver
     X_euler, t_euler = SimpleSolver(eval_f, x_start, p, eval_u, 
@@ -149,10 +147,10 @@ def test_solver_stability(p, eval_f, eval_u, x_start, max_dt_FE, duration=10):
     X_leap, t_leap = LeapfrogSolver(eval_f, x_start, p, eval_u, 
                                     num_iter, dt, visualize=False)
     
-    # Compare energy over time
+    # CHANGED: pressure is now in x[N:2N] (second half)
     N = p['Nx'] * p['Nz']
-    energy_euler = np.sum(X_euler[:N, :]**2, axis=0)  # Pressure energy
-    energy_leap = np.sum(X_leap[:N, :]**2, axis=0)
+    energy_euler = np.sum(X_euler[N:2*N, :]**2, axis=0)  # was X_euler[:N, :]
+    energy_leap = np.sum(X_leap[N:2*N, :]**2, axis=0)    # was X_leap[:N, :]
     
     # Plot comparison
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))

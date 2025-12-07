@@ -35,7 +35,7 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
 
     # Extract and reshape pressure field
     x_i = np.asarray(X[:, index]).reshape(-1)
-    field = x_i[:N].reshape(Nx, Nz).T  # plot as (Z, X)
+    field = x_i[N:2*N].reshape(Nx, Nz).T
 
     vmin = vmax = None
     if sym:
@@ -68,15 +68,17 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
             hp = p.get('hydrophones', {})
             if hp.get('n_phones', 0) > 0:
                 if 'z_pos' in hp and 'x_indices' in hp:
-                    # Horizontal array: same z, varying x
+                    # Horizontal array: connected with line
                     zpos = hp['z_pos'] * dz
-                    for x_idx in hp['x_indices']:
-                        ax.plot(x_idx * dx, zpos, '^', color='white', markersize=6, markeredgecolor='k', alpha=0.85)
+                    x_positions = [x_idx * dx for x_idx in hp['x_indices']]
+                    ax.plot(x_positions, [zpos]*len(x_positions), 'w-s', 
+                           markersize=6, markeredgecolor='k', linewidth=1.5, alpha=0.9)
                 elif 'x_pos' in hp and 'z_indices' in hp:
-                    # Vertical array: same x, varying z
+                    # Vertical array: connected with line
                     xpos = hp['x_pos'] * dx
-                    for z_idx in hp['z_indices']:
-                        ax.plot(xpos, z_idx * dz, '^', color='white', markersize=6, markeredgecolor='k', alpha=0.85)
+                    z_positions = [z_idx * dz for z_idx in hp['z_indices']]
+                    ax.plot([xpos]*len(z_positions), z_positions, 'w-s',
+                           markersize=6, markeredgecolor='k', linewidth=1.5, alpha=0.9)
         except Exception:
             pass
 
@@ -84,4 +86,3 @@ def plot_pressure_xz_at(p, X, t, index=None, time_s=None, cmap='RdBu_r', sym=Tru
     plt.tight_layout()
     plt.show()
     return fig, ax
-
