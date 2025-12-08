@@ -14,3 +14,4 @@ report/missfont.log
 
 *.gif
 pod_outputs/
+*.npz
