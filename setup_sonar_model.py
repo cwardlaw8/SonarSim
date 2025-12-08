@@ -89,8 +89,11 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     p['B'] = B_lil.tocsr()
     
+    # Normalize hydrophone_config if string
+    hydro_cfg = hydrophone_config.lower() if isinstance(hydrophone_config, str) else hydrophone_config
+
     # Configure hydrophones
-    if hydrophone_config == 'horizontal':
+    if hydro_cfg == 'horizontal':
         # 5 equally-spaced hydrophones at mid-depth, avoiding edges (absorbing boundaries)
         z_pos = Nz // 2
         n_phones = 5
@@ -101,7 +104,7 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
             'x_indices': x_indices,
             'n_phones': n_phones
         }
-    elif hydrophone_config == 'vertical':
+    elif hydro_cfg == 'vertical':
         # 5 equally-spaced hydrophones vertically at center x-position, avoiding edges
         x_pos = Nx // 2
         n_phones = 5
@@ -112,9 +115,9 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
             'z_indices': z_indices,
             'n_phones': n_phones
         }
-    elif isinstance(hydrophone_config, dict):
+    elif isinstance(hydro_cfg, dict):
         # Custom configuration
-        p['hydrophones'] = hydrophone_config
+        p['hydrophones'] = hydro_cfg
     else:
         raise ValueError(f"Unknown hydrophone_config: {hydrophone_config}")
     
@@ -206,15 +209,20 @@ def print_model_info(model, verbose=True):
     
     # Hydrophone information
     hydro = model['hydrophones']
-    print(f"\nHydrophones: {hydro['n_phones']} receivers")
-    if 'x_indices' in hydro:
+    n_phones = hydro.get('n_phones', len(hydro.get('x_indices', [])))
+    print(f"\nHydrophones: {n_phones} receivers")
+    if 'z_pos' in hydro and 'x_indices' in hydro:
         print(f"  Type: Horizontal array at z = {hydro['z_pos'] * model['dz']:.1f}m")
         for i, x_idx in enumerate(hydro['x_indices']):
             x_pos = x_idx * model['dx']
             print(f"    H{i+1}: x = {x_pos:.1f}m")
-    elif 'z_indices' in hydro:
+    elif 'x_pos' in hydro and 'z_indices' in hydro:
         print(f"  Type: Vertical array at x = {hydro['x_pos'] * model['dx']:.1f}m")
         print(f"    Depths: z = {min(hydro['z_indices'])*model['dz']:.1f}m to {max(hydro['z_indices'])*model['dz']:.1f}m")
+    elif 'x_indices' in hydro and 'z_indices' in hydro:
+        print("  Type: Custom paired hydrophones (x,z):")
+        for i, (xi, zi) in enumerate(zip(hydro['x_indices'], hydro['z_indices'])):
+            print(f"    H{i+1}: x = {xi*model['dx']:.1f}m, z = {zi*model['dz']:.1f}m")
     
     # Time integration
     print(f"\nTime Integration:")
