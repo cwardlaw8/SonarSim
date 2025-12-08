@@ -5,16 +5,21 @@ import numpy as np
 from scipy import sparse as sp
 from getParam_Sonar import getParam_Sonar
 from eval_u_Sonar import eval_u_Sonar_20_const
+from eval_u_Sonar import eval_u_Sonar_20_const
 from eval_f_Sonar import eval_f_Sonar
 from eval_g_Sonar import eval_g_Sonar
 
 
 def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20, 
+def setup_sonar_model(Nx=161, Nz=41, Lx=4e3, Lz=1e3, f0=20, 
                       BC=True, UseSparseMatrices=True,
                       source_position='surface', hydrophone_config='Horizontal',
                       t_extra=0):
+                      source_position='surface', hydrophone_config='horizontal',
+                      t_extra=0):
     """
     Complete sonar model setup with eval_u_Sonar_20_const (constant 20Hz signal).
+    Complete sonar model setup with eval_u_Sonar_20_const (time-varying 20Hz signal).
     
     Parameters:
     -----------
@@ -56,6 +61,12 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
         - wavelength : acoustic wavelength
         - ppw : points per wavelength
     """
+
+    dx = Lx / (Nx - 1)
+    dz = Lz / (Nz - 1)
+
+    if dx != dz:
+        raise ValueError('ERROR, asymmetric discretization!!!!')
     
     # Get base parameters from getParam_Sonar
     p, x_start, t_start, t_stop, max_dt_FE = getParam_Sonar(
@@ -86,6 +97,7 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     source_idx = p['sonar_ix'] * Nz + p['sonar_iz']
     
     B_lil = sp.lil_matrix((2*N, 1), dtype=float)
+    B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     B_lil[source_idx, 0] = 1.0 / (p['dx'] * p['dz'])
     p['B'] = B_lil.tocsr()
     
@@ -128,6 +140,7 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
     # Create scaled input function (accounts for cell area)
     def eval_u_scaled(t):
         return (p['dx'] * p['dz']) * eval_u_Sonar_20_const(t)
+        return (p['dx'] * p['dz']) * eval_u_Sonar_20_const(t)
     
     # Assemble complete model dictionary
     model = {
@@ -140,6 +153,7 @@ def setup_sonar_model_full(Nx=301, Nz=51, Lx=5625, Lz=937.5, f0=20,
         
         # Functions
         'eval_f': eval_f_Sonar,
+        'eval_u': eval_u_Sonar_20_const,
         'eval_u': eval_u_Sonar_20_const,
         'eval_u_scaled': eval_u_scaled,
         'eval_g': eval_g_Sonar,

@@ -13,3 +13,4 @@ report/main.out
 report/missfont.log
 
 *.gif
+pod_outputs/
