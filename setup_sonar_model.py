@@ -20,6 +20,7 @@ def setup_sonar_model_full(
     source_position="surface",
     hydrophone_config="horizontal",
     t_extra=0.0,
+    eval_u=eval_u_Sonar_20_const,
 ):
     """
     Complete sonar model setup with eval_u_Sonar_20_const (constant 20Hz signal).
@@ -98,7 +99,7 @@ def setup_sonar_model_full(
 
     # Scaled input
     def eval_u_scaled(t):
-        return (p["dx"] * p["dz"]) * eval_u_Sonar_20_const(t)
+        return (p["dx"] * p["dz"]) * eval_u(t)
 
     model = {
         "p": p,
@@ -107,7 +108,7 @@ def setup_sonar_model_full(
         "t_stop": t_stop,
         "max_dt_FE": max_dt_FE,
         "eval_f": eval_f_Sonar,
-        "eval_u": eval_u_Sonar_20_const,
+        "eval_u": eval_u,
         "eval_u_scaled": eval_u_scaled,
         "eval_g": eval_g_Sonar,
         "Nx": Nx,
@@ -138,6 +139,7 @@ def setup_sonar_model(
     source_position="surface",
     hydrophone_config="horizontal",
     t_extra=0.0,
+    eval_u =eval_u_Sonar_20_const,
 ):
     """Wrapper for setup_sonar_model_full using smaller grid for quicker runs."""
     return setup_sonar_model_full(
@@ -151,6 +153,7 @@ def setup_sonar_model(
         hydrophone_config=hydrophone_config,
         source_position=source_position,
         t_extra=t_extra,
+        eval_u=eval_u,
     )
 
 
