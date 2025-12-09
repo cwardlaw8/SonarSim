@@ -72,7 +72,7 @@ where $p(x,z,t)$ is acoustic pressure [Pa], $c$ is the speed of sound [m/s], $\a
 
 The state vector contains acoustic pressure $p_{i,j}$ and its time derivative $w_{i,j}$ at each grid point:
 \begin{equation}
-x = [p_{1,1}, p_{1,2}, \ldots, p_{N_x,N_z}, w_{1,1}, w_{1,2}, \ldots, w_{N_x,N_z}]^T \in \mathbb{R}^{2N}
+x = [w_{1,1}, w_{1,2}, \ldots, w_{N_x,N_z}, p_{1,1}, p_{1,2}, \ldots, p_{N_x,N_z}]^T \in \mathbb{R}^{2N}
 \end{equation}
 where $N = N_x \times N_z$ is the total number of grid points. The physical and geometric parameters of the system are:
 \begin{equation}
