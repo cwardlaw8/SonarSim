@@ -1609,7 +1609,7 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
     fig_height = 3 * (plot_height + 0.8 * figscale) + 1.5 * figscale
     
     fig, axes = plt.subplots(3, 2, figsize=(fig_width, fig_height))
-    plt.subplots_adjust(bottom=0.05, top=0.90, left=0.08, right=0.98, hspace=0.4, wspace=0.2)
+    plt.subplots_adjust(bottom=0.05, top=0.88, left=0.08, right=0.98, hspace=0.5, wspace=0.22)
     
     # Initialize plots
     rom_images = []
@@ -1622,6 +1622,9 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
     
     # Get max L2 for y-axis (shared across both)
     max_l2 = max(max(l2_over_time[waveforms[0]]['l2']), max(l2_over_time[waveforms[1]]['l2'])) * 1.1
+    
+    # Row labels (centered above both columns)
+    row_labels = ['POD-ROM Pressure', 'Pointwise Error', 'L2 Error Over Time']
     
     for j, name in enumerate(waveforms):
         x_rom = rom_results[name]['x']
@@ -1641,30 +1644,28 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
         im_rom = axes[0, j].imshow(p_rom_0, aspect='equal', cmap='RdBu_r',
                                     vmin=-vmax_plot, vmax=vmax_plot,
                                     extent=[0, Lx, Lz, 0])
-        axes[0, j].set_title(f"'{name}'", fontsize=12 * figscale, fontweight='bold')
-        if j == 0:
-            axes[0, j].set_ylabel('POD-ROM\nDepth (m)', fontsize=10 * figscale, fontweight='bold')
-        axes[0, j].tick_params(labelsize=8 * figscale)
+        axes[0, j].set_title(f"'{name}'", fontsize=14 * figscale, fontweight='bold')
+        axes[0, j].set_ylabel('Depth (m)', fontsize=12 * figscale, fontweight='bold')
+        axes[0, j].tick_params(labelsize=10 * figscale)
         
         divider_rom = make_axes_locatable(axes[0, j])
-        cax_rom = divider_rom.append_axes("bottom", size="6%", pad=0.25)
+        cax_rom = divider_rom.append_axes("bottom", size="6%", pad=0.3)
         cbar_rom = plt.colorbar(im_rom, cax=cax_rom, orientation='horizontal')
-        cbar_rom.set_label('Pressure (Pa)', fontsize=8 * figscale, fontweight='bold')
-        cbar_rom.ax.tick_params(labelsize=7 * figscale)
+        cbar_rom.set_label('Pressure (Pa)', fontsize=11 * figscale, fontweight='bold')
+        cbar_rom.ax.tick_params(labelsize=9 * figscale)
         
         # Row 1: Spatial error field
         im_err = axes[1, j].imshow(p_error_0, aspect='equal', cmap=err_cmap,
                                     vmin=0, vmax=err_max,
                                     extent=[0, Lx, Lz, 0])
-        if j == 0:
-            axes[1, j].set_ylabel('Pointwise Error\nDepth (m)', fontsize=10 * figscale, fontweight='bold')
-        axes[1, j].tick_params(labelsize=8 * figscale)
+        axes[1, j].set_ylabel('Depth (m)', fontsize=12 * figscale, fontweight='bold')
+        axes[1, j].tick_params(labelsize=10 * figscale)
         
         divider_err = make_axes_locatable(axes[1, j])
-        cax_err = divider_err.append_axes("bottom", size="6%", pad=0.25)
+        cax_err = divider_err.append_axes("bottom", size="6%", pad=0.3)
         cbar_err = plt.colorbar(im_err, cax=cax_err, orientation='horizontal')
-        cbar_err.set_label(err_label, fontsize=8 * figscale, fontweight='bold')
-        cbar_err.ax.tick_params(labelsize=7 * figscale)
+        cbar_err.set_label(err_label, fontsize=11 * figscale, fontweight='bold')
+        cbar_err.ax.tick_params(labelsize=9 * figscale)
         
         # Row 2: L2 error over time (match aspect ratio of other plots)
         l2_err_0 = np.linalg.norm(p_full_0 - p_rom_0) / max_norms[name] * 100
@@ -1674,18 +1675,28 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
         time_line = axes[2, j].axvline(x=0, color='red', lw=1.5, linestyle='--')
         time_dot, = axes[2, j].plot([0], [l2_err_0], 'o', color='red', markersize=8)
         
-        if j == 0:
-            axes[2, j].set_ylabel('L2 Error (%)', fontsize=10 * figscale, fontweight='bold')
-        axes[2, j].set_xlabel('Time (ms)', fontsize=10 * figscale, fontweight='bold')
+        axes[2, j].set_ylabel('L2 Error (%)', fontsize=12 * figscale, fontweight='bold')
+        axes[2, j].set_xlabel('Time (ms)', fontsize=12 * figscale, fontweight='bold')
         axes[2, j].set_xlim([0, max_time])
         axes[2, j].set_ylim([0, max_l2])
         axes[2, j].grid(True, alpha=0.3)
-        axes[2, j].tick_params(labelsize=8 * figscale)
+        axes[2, j].tick_params(labelsize=10 * figscale)
         
         rom_images.append(im_rom)
         err_images.append(im_err)
         time_lines.append(time_line)
         time_dots.append(time_dot)
+    
+    # Add centered row labels above each row
+    for i, label in enumerate(row_labels):
+        # Get the top of the row (use first column axis position)
+        bbox0 = axes[i, 0].get_position()
+        bbox1 = axes[i, 1].get_position()
+        center_x = (bbox0.x0 + bbox1.x1) / 2
+        top_y = bbox0.y1 + 0.02
+        
+        fig.text(center_x, top_y, label, fontsize=13 * figscale, fontweight='bold',
+                 ha='center', va='bottom')
     
     # Build title with timing info
     fo_time_ms = fo_time * 1000
@@ -1716,7 +1727,7 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
     else:
         full_title = title_line1
     
-    plt.suptitle(full_title, fontsize=10 * figscale, fontweight='bold', y=0.98)
+    plt.suptitle(full_title, fontsize=12 * figscale, fontweight='bold', y=0.98)
     
     # Animation update function
     def update(frame_num):
