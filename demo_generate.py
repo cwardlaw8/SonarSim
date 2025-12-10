@@ -203,10 +203,14 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
     print("DEMO DATA GENERATION")
     print("=" * 70)
     
+    # Track total training time
+    total_training_start = time.perf_counter()
+    
     # -------------------------------------------------------------------------
     # Setup model
     # -------------------------------------------------------------------------
     print("\n[1/5] Setting up model...")
+    setup_start = time.perf_counter()
     
     model = setup_sonar_model(
         Nx=CONFIG['Nx'],
@@ -253,10 +257,13 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
             obs_idx = N + x_idx * Nz + z_idx
             C[i, obs_idx] = 1.0
     
+    setup_time = time.perf_counter() - setup_start
+    
     print(f"  Grid: {Nx} x {Nz} = {N:,} cells")
     print(f"  DOFs: {n:,}")
     print(f"  dt: {dt*1e6:.2f} µs")
     print(f"  t_sim: {t_sim*1000:.0f} ms")
+    print(f"  Setup time: {setup_time:.2f}s")
     
     # -------------------------------------------------------------------------
     # Run full-order for training waveform (with snapshots for SVD)
@@ -267,7 +274,7 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
         A, B, C, x_start, WAVEFORMS[TRAINING_WAVEFORM],
         t_sim, dt, dx, dz, n, n_phones, save_snapshots=True
     )
-    print(f"  Time: {time_train:.2f}s")
+    print(f"  Simulation time: {time_train:.2f}s")
     print(f"  Snapshots: {X_train.shape}")
     
     # -------------------------------------------------------------------------
@@ -275,9 +282,9 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
     # -------------------------------------------------------------------------
     print(f"\n[3/5] Computing SVD and finding stable modes...")
     
-    t0 = time.perf_counter()
+    svd_start = time.perf_counter()
     U, S = compute_svd(X_train, skip=CONFIG['svd_skip'], k=CONFIG['svd_k'])
-    svd_time = time.perf_counter() - t0
+    svd_time = time.perf_counter() - svd_start
     
     cumulative_energy = np.cumsum(S**2) / np.sum(S**2)
     print(f"  SVD time: {svd_time:.2f}s")
@@ -285,8 +292,12 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
     print(f"  Energy in 10 modes: {cumulative_energy[9]*100:.1f}%")
     print(f"  Energy in 50 modes: {cumulative_energy[min(49, len(S)-1)]*100:.1f}%")
     
+    stability_start = time.perf_counter()
     stable_qs = find_stable_qs(A, U)
+    stability_time = time.perf_counter() - stability_start
+    
     q_pod = max(stable_qs)
+    print(f"  Stability check time: {stability_time:.2f}s")
     print(f"  Stable q values: {len(stable_qs)} found")
     print(f"  Max stable q: {q_pod}")
     print(f"  Energy at q={q_pod}: {cumulative_energy[q_pod-1]*100:.2f}%")
@@ -296,9 +307,16 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
     # -------------------------------------------------------------------------
     print(f"\n[4/5] Building ROM (q={q_pod})...")
     
+    build_start = time.perf_counter()
     rom = build_rom(A, B, C, x_start, U, q_pod)
+    build_time = time.perf_counter() - build_start
+    
     print(f"  A_pod: {rom['A_pod'].shape}")
     print(f"  Compression: {100 * q_pod / n:.4f}%")
+    print(f"  Build time: {build_time:.2f}s")
+    
+    # Total training time (setup + snapshot generation + SVD + stability + build)
+    total_training_time = setup_time + time_train + svd_time + stability_time + build_time
     
     # -------------------------------------------------------------------------
     # Run full-order for all waveforms (WITH snapshots for spatial error)
@@ -331,6 +349,8 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
                 'time': time_fo,
             }
             print(f"{time_fo:.2f}s | X: {X_fo.shape}")
+    
+    total_elapsed = time.perf_counter() - total_training_start
     
     # -------------------------------------------------------------------------
     # Save everything
@@ -385,6 +405,14 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
         # Waveform names
         'waveform_names': list(WAVEFORMS.keys()),
         'training_waveform': TRAINING_WAVEFORM,
+        
+        # Timing info
+        'training_time': total_training_time,
+        'setup_time': setup_time,
+        'snapshot_time': time_train,
+        'svd_time': svd_time,
+        'stability_time': stability_time,
+        'build_time': build_time,
     }
     
     # Save full-order results for each waveform (including snapshots)
@@ -408,6 +436,16 @@ def generate_demo_data(output_path='demo_outputs/demo_model.npz'):
     print(f"Waveforms: {list(WAVEFORMS.keys())}")
     print(f"Training: '{TRAINING_WAVEFORM}'")
     print(f"ROM: q={q_pod} modes")
+    print("-" * 70)
+    print("TIMING BREAKDOWN:")
+    print(f"  Model setup:        {setup_time:.2f}s")
+    print(f"  Snapshot generation:{time_train:.2f}s")
+    print(f"  SVD computation:    {svd_time:.2f}s")
+    print(f"  Stability check:    {stability_time:.2f}s")
+    print(f"  ROM build:          {build_time:.2f}s")
+    print(f"  --------------------------------")
+    print(f"  TOTAL TRAINING:     {total_training_time:.2f}s")
+    print(f"  Total script time:  {total_elapsed:.2f}s")
     print("=" * 70)
 
 
