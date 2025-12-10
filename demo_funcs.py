@@ -1813,3 +1813,180 @@ def animate_2_waveforms_error(demo, waveforms, n_frames=50, fps=10, error_type='
         timer.add_callback(animate)
         
         plt.show()
+
+
+def plot_snapshots(demo, waveform, n_snapshots=6, vmax_scale=0.3, figscale=1.0):
+    """
+    Plot time snapshots of ROM pressure field for a single waveform, stacked vertically.
+    
+    Parameters
+    ----------
+    demo : dict
+        Output from load_demo_data()
+    waveform : str
+        Waveform name ('cont', 'pulse', or '5hz')
+    n_snapshots : int
+        Number of snapshots to display (default 6)
+    vmax_scale : float
+        Scale factor for pressure colorbar (smaller = more saturated colors)
+    figscale : float
+        Scale factor for figure size (default 1.0)
+    """
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    
+    # Validate
+    if waveform not in WAVEFORMS:
+        raise ValueError(f"Unknown waveform '{waveform}'. Options: {list(WAVEFORMS.keys())}")
+    if waveform not in demo['full_order']:
+        raise ValueError(f"No full-order reference for '{waveform}'")
+    
+    # Simulate ROM
+    print(f"Simulating ROM for '{waveform}'...")
+    rom_result = simulate_rom(demo, waveform)
+    
+    # Extract parameters
+    Phi = demo['Phi']
+    N, Nx, Nz = demo['N'], demo['Nx'], demo['Nz']
+    Lx, Lz = demo['Lx'], demo['Lz']
+    
+    x_rom = rom_result['x']
+    t_rom = rom_result['t']
+    
+    # Select snapshot indices (evenly spaced, skip t=0)
+    n_steps = len(t_rom)
+    snapshot_indices = np.linspace(n_steps // (n_snapshots + 1), n_steps - 1, n_snapshots, dtype=int)
+    
+    # Compute global vmax
+    vmax_global = 0
+    for idx in snapshot_indices:
+        p_rom = (Phi @ x_rom[idx, :])[N:]
+        vmax_global = max(vmax_global, np.abs(p_rom).max())
+    vmax_plot = vmax_global * vmax_scale
+    
+    # Figure sizing - vertical stack
+    domain_aspect = Lx / Lz
+    plot_width = 8 * figscale
+    plot_height = plot_width / domain_aspect
+    
+    fig_width = plot_width + 1.0 * figscale
+    fig_height = n_snapshots * (plot_height + 0.3 * figscale) + 1.0 * figscale
+    
+    fig, axes = plt.subplots(n_snapshots, 1, figsize=(fig_width, fig_height))
+    if n_snapshots == 1:
+        axes = [axes]
+    
+    plt.subplots_adjust(bottom=0.05, top=0.92, left=0.08, right=0.88, hspace=0.3)
+    
+    # Plot each snapshot
+    for i, idx in enumerate(snapshot_indices):
+        ax = axes[i]
+        
+        p_rom = (Phi @ x_rom[idx, :])[N:].reshape(Nx, Nz).T
+        t_ms = t_rom[idx] * 1000
+        
+        im = ax.imshow(p_rom, aspect='equal', cmap='RdBu_r',
+                       vmin=-vmax_plot, vmax=vmax_plot,
+                       extent=[0, Lx, Lz, 0])
+        
+        ax.set_ylabel(f't = {t_ms:.0f} ms', fontsize=11 * figscale, fontweight='bold')
+        ax.tick_params(labelsize=9 * figscale)
+        
+        # Only show x-axis label on bottom plot
+        if i == n_snapshots - 1:
+            ax.set_xlabel('Range (m)', fontsize=11 * figscale, fontweight='bold')
+        else:
+            ax.set_xticklabels([])
+    
+    # Add shared colorbar on the right
+    cbar_ax = fig.add_axes([0.90, 0.15, 0.02, 0.7])
+    cbar = fig.colorbar(im, cax=cbar_ax, orientation='vertical')
+    cbar.set_label('Pressure (Pa)', fontsize=11 * figscale, fontweight='bold')
+    cbar.ax.tick_params(labelsize=9 * figscale)
+    
+    # Title
+    fig.suptitle(f"POD-ROM Pressure Snapshots: '{waveform}'", 
+                 fontsize=14 * figscale, fontweight='bold', y=0.96)
+    
+    plt.show()
+
+def plot_error_over_time(demo, waveform, figscale=1.0):
+    """
+    Plot relative error over time for a single waveform.
+    
+    Parameters
+    ----------
+    demo : dict
+        Output from load_demo_data()
+    waveform : str
+        Waveform name ('cont', 'pulse', or '5hz')
+    figscale : float
+        Scale factor for figure size (default 1.0)
+    """
+    # Validate
+    if waveform not in WAVEFORMS:
+        raise ValueError(f"Unknown waveform '{waveform}'. Options: {list(WAVEFORMS.keys())}")
+    if waveform not in demo['full_order']:
+        raise ValueError(f"No full-order reference for '{waveform}'")
+    if demo['full_order'][waveform]['X'] is None:
+        raise ValueError(f"No full-order snapshots (X_fo) saved for '{waveform}'. "
+                        "Re-run demo_generate.py with save_snapshots=True.")
+    
+    # Simulate ROM
+    print(f"Simulating ROM for '{waveform}'...")
+    rom_result = simulate_rom(demo, waveform)
+    error = compute_error(demo, rom_result)
+    print(f"  Total relative error: {error['rel_error']:.2f}%")
+    
+    # Extract parameters
+    Phi = demo['Phi']
+    N = demo['N']
+    
+    x_rom = rom_result['x']
+    t_rom = rom_result['t']
+    X_fo = demo['full_order'][waveform]['X']
+    t_fo = demo['full_order'][waveform]['t']
+    n_fo_steps = X_fo.shape[1]
+    
+    # Compute max field norm for normalization
+    max_norm = 0
+    for idx in range(0, n_fo_steps, max(1, n_fo_steps // 20)):
+        p = X_fo[N:, idx]
+        max_norm = max(max_norm, np.linalg.norm(p))
+    
+    # Compute error at each timestep
+    errors = []
+    times = []
+    
+    n_points = min(200, n_fo_steps)
+    for idx in range(0, n_fo_steps, max(1, n_fo_steps // n_points)):
+        rom_idx = int(idx * len(t_rom) / n_fo_steps)
+        rom_idx = min(rom_idx, len(t_rom) - 1)
+        
+        p_full = X_fo[N:, idx]
+        p_rom = (Phi @ x_rom[rom_idx, :])[N:]
+        
+        err = np.linalg.norm(p_full - p_rom) / max_norm * 100
+        errors.append(err)
+        times.append(t_fo[idx] * 1000)
+    
+    # Plot
+    colors = {'cont': 'green', 'pulse': 'blue', '5hz': 'red'}
+    color = colors.get(waveform, 'black')
+    
+    fig, ax = plt.subplots(figsize=(6 * figscale, 3 * figscale))
+    
+    # Plot with equation as label
+    eq_label = r"$\frac{\|\mathbf{p}_{\mathrm{full}} - \mathbf{p}_{\mathrm{ROM}}\|_2}{\max_t \|\mathbf{p}_{\mathrm{full}}(t)\|_2} \times 100\%$"
+    ax.plot(times, errors, '-', color=color, lw=2, label=eq_label)
+    
+    ax.set_xlabel('Time (ms)', fontsize=12 * figscale, fontweight='bold')
+    ax.set_ylabel('Relative Error (%)', fontsize=12 * figscale, fontweight='bold')
+    ax.set_title(f"Spatial Error Over Time: '{waveform}'", fontsize=14 * figscale, fontweight='bold')
+    ax.set_xlim([0, times[-1]])
+    ax.set_ylim([0, max(errors) * 1.1])
+    ax.grid(True, alpha=0.3)
+    ax.tick_params(labelsize=10 * figscale)
+    ax.legend(fontsize=14 * figscale, loc='lower right')
+    
+    plt.tight_layout()
+    plt.show()
